@@ -1,0 +1,117 @@
+#cloud-config
+
+## Update and upgrade system packages
+package_update: true
+package_upgrade: true
+package_reboot_if_required: true
+
+## Create a new user with sudo privileges
+users:
+  - default
+  - name: noahlozevski
+    groups: users, admin
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    shell: /bin/bash
+    ssh_authorized_keys:
+      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILqES71uHD8h34w8J2NAmKe8xB9heIOAZdTBao021PMy noahlozevski@gmail.com
+
+## Disable root SSH login and password authentication
+ssh_pwauth: false
+disable_root: true
+
+## Install necessary packages
+packages:
+  - ufw
+  - fail2ban
+  - git
+  - curl
+  - software-properties-common
+  - nginx
+  - certbot
+  - python3-certbot-nginx
+  - unattended-upgrades
+
+## Write configuration files
+write_files:
+  ## Fail2Ban configuration
+  - path: /etc/fail2ban/jail.local
+    content: |
+      [sshd]
+      enabled = true
+      banaction = iptables-multiport
+
+  ## Nginx server block configuration
+  - path: /etc/nginx/sites-available/hackbox.lozev.ski
+    content: |
+      server {
+          listen 80;
+          server_name hackbox.lozev.ski;
+
+          location / {
+              proxy_pass http://localhost:3000/;
+              proxy_http_version 1.1;
+              proxy_set_header Upgrade $http_upgrade;
+              proxy_set_header Connection 'upgrade';
+              proxy_set_header Host $host;
+              proxy_cache_bypass $http_upgrade;
+          }
+      }
+
+## Run commands after the user is set up
+runcmd:
+  ## Update SSH configuration for enhanced security
+  - sed -i -e '/^\(#\|\)PermitRootLogin/s/^.*$/PermitRootLogin no/' /etc/ssh/sshd_config
+  - sed -i -e '/^\(#\|\)PasswordAuthentication/s/^.*$/PasswordAuthentication no/' /etc/ssh/sshd_config
+  - sed -i -e '/^\(#\|\)KbdInteractiveAuthentication/s/^.*$/KbdInteractiveAuthentication no/' /etc/ssh/sshd_config
+  - sed -i -e '/^\(#\|\)ChallengeResponseAuthentication/s/^.*$/ChallengeResponseAuthentication no/' /etc/ssh/sshd_config
+  - sed -i -e '/^\(#\|\)MaxAuthTries/s/^.*$/MaxAuthTries 2/' /etc/ssh/sshd_config
+  - sed -i -e '/^\(#\|\)AllowTcpForwarding/s/^.*$/AllowTcpForwarding no/' /etc/ssh/sshd_config
+  - sed -i -e '/^\(#\|\)X11Forwarding/s/^.*$/X11Forwarding no/' /etc/ssh/sshd_config
+  - sed -i -e '/^\(#\|\)AllowAgentForwarding/s/^.*$/AllowAgentForwarding no/' /etc/ssh/sshd_config
+  - sed -i -e '/^\(#\|\)AuthorizedKeysFile/s/^.*$/AuthorizedKeysFile .ssh\/authorized_keys/' /etc/ssh/sshd_config
+  - sed -i "\$a AllowUsers noahlozevski" /etc/ssh/sshd_config
+  - systemctl restart sshd
+
+  ## Install Node.js (using NodeSource)
+  - curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
+  - apt-get install -y nodejs
+
+  ## Install PM2 globally
+  - npm install -g pm2
+
+  ## Configure UFW firewall
+  - ufw default deny incoming
+  - ufw default allow outgoing
+  - ufw allow OpenSSH
+  - ufw allow 'Nginx Full'
+  - ufw --force enable
+
+  ## Enable and start Fail2Ban service
+  - systemctl enable fail2ban
+  - systemctl start fail2ban
+
+  ## Clone your Node.js application
+  - su - noahlozevski -c 'git clone git@github.com:noahlozevski/hackbox.tv.git /home/noahlozevski/app'
+  - su - noahlozevski -c 'cd /home/noahlozevski/app && npm install'
+
+  ## Start the application with PM2
+  - su - noahlozevski -c 'pm2 start /home/noahlozevski/app/app.js --name hackbox-app'
+  - su - noahlozevski -c 'pm2 startup systemd -u noahlozevski --hp /home/noahlozevski'
+  - su - noahlozevski -c 'pm2 save'
+
+  ## Configure Nginx
+  - rm /etc/nginx/sites-enabled/default
+  - ln -s /etc/nginx/sites-available/hackbox.lozev.ski /etc/nginx/sites-enabled/
+  - systemctl restart nginx
+
+  ## Obtain SSL certificate with Certbot
+  - certbot --nginx --non-interactive --agree-tos --redirect --hsts --staple-ocsp --email your-email@example.com -d hackbox.lozev.ski
+
+  ## Enable unattended upgrades
+  - dpkg-reconfigure -f noninteractive unattended-upgrades
+
+  ## Reboot the system to apply all changes
+  - reboot
+
+## Final message
+final_message: "The system is finally up, after $UPTIME seconds"
