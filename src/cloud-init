@@ -41,11 +41,11 @@ write_files:
       banaction = iptables-multiport
 
   ## Nginx server block configuration
-  - path: /etc/nginx/sites-available/hackbox.lozev.ski
+  - path: /etc/nginx/sites-available/hackbox.tv.lozev.ski
     content: |
       server {
           listen 80;
-          server_name hackbox.lozev.ski;
+          server_name hackbox.tv.lozev.ski;
 
           location / {
               proxy_pass http://localhost:3000/;
@@ -103,11 +103,11 @@ runcmd:
 
   ## Configure Nginx
   - rm /etc/nginx/sites-enabled/default
-  - ln -s /etc/nginx/sites-available/hackbox.lozev.ski /etc/nginx/sites-enabled/
+  - ln -s /etc/nginx/sites-available/hackbox.tv.lozev.ski /etc/nginx/sites-enabled/
   - systemctl restart nginx
 
   ## Obtain SSL certificate with Certbot
-  - certbot --nginx --non-interactive --agree-tos --redirect --hsts --staple-ocsp --email your-email@example.com -d hackbox.lozev.ski
+  - certbot --nginx --non-interactive --agree-tos --redirect --hsts --staple-ocsp --email noahlozevski@gmail.com -d hackbox.tv.lozev.ski
 
   ## Enable unattended upgrades
   - dpkg-reconfigure -f noninteractive unattended-upgrades
