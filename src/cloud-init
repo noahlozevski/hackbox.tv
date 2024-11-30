@@ -91,7 +91,7 @@ runcmd:
   - systemctl start fail2ban
 
   ## Clone your Node.js application
-  - su - noahlozevski -c 'git clone git@github.com:noahlozevski/hackbox.tv.git /home/noahlozevski/app'
+  - su - noahlozevski -c 'git clone https://github.com/noahlozevski/hackbox.tv.git /home/noahlozevski/app'
   - su - noahlozevski -c 'cd /home/noahlozevski/app && npm install'
 
   ## Start the application with PM2

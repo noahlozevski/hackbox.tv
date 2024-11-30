@@ -1,0 +1,31 @@
+{
+    "name": "@noahlozevski/hackbox.tv",
+    "author": "noah lozevski",
+    "version": "1.0.0",
+    "description": "hackbox.tv",
+    "main": "index.js",
+    "scripts": {
+        "build": "tsc",
+        "start": "node dist/server.js",
+        "dev": "ts-node src/server.ts",
+        "lint": "eslint . --ext .ts",
+        "lint:fix": "eslint . --ext .ts --fix",
+        "format": "prettier --write \"src/**/*.ts\""
+    },
+    "license": "MIT",
+    "devDependencies": {
+        "@types/node": "^22.10.1",
+        "@types/ws": "^8.5.13",
+        "@typescript-eslint/eslint-plugin": "^8.16.0",
+        "@typescript-eslint/parser": "^8.16.0",
+        "eslint": "^9.16.0",
+        "eslint-config-prettier": "^9.1.0",
+        "eslint-plugin-prettier": "^5.2.1",
+        "prettier": "^3.4.1",
+        "ts-node": "^10.9.2",
+        "typescript": "^5.7.2"
+    },
+    "dependencies": {
+        "ws": "^8.18.0"
+    }
+}

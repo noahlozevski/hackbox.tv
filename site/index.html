@@ -1,0 +1,250 @@
+<!doctype html>
+<html>
+  <head>
+    <title>WebSocket Chat Client</title>
+    <style>
+      /* Basic styles for the chat client */
+      #rooms {
+        border: 1px solid #ccc;
+        padding: 10px;
+        width: 200px;
+        float: left;
+      }
+      #chat {
+        border: 1px solid #ccc;
+        padding: 10px;
+        margin-left: 210px;
+      }
+      #messages {
+        height: 300px;
+        overflow-y: scroll;
+        border: 1px solid #ccc;
+        padding: 5px;
+        margin-bottom: 10px;
+      }
+      #clients {
+        margin-top: 10px;
+        border-top: 1px solid #ccc;
+        padding-top: 5px;
+      }
+      #clients ul {
+        list-style-type: none;
+        padding: 0;
+      }
+      #clients li {
+        margin-bottom: 5px;
+      }
+      /* Additional styles */
+      body {
+        font-family: Arial, sans-serif;
+      }
+      #sendButton {
+        margin-left: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>WebSocket Chat Client</h1>
+    <div id="rooms">
+      <h2>Available Rooms</h2>
+      <ul id="roomList"></ul>
+    </div>
+    <div id="chat">
+      <h2 id="roomName">Not in a room</h2>
+      <div id="messages"></div>
+      <input
+        type="text"
+        id="messageInput"
+        placeholder="Type a message..."
+        disabled
+      />
+      <button id="sendButton" disabled>Send</button>
+      <div id="clients">
+        <h3>Clients in Room:</h3>
+        <ul id="clientList"></ul>
+      </div>
+    </div>
+    <script>
+      // JavaScript code to connect to the WebSocket server and handle messages
+
+      // Connect to the WebSocket server
+      const socket = new WebSocket('wss://hackbox.tv.lozev.ski');
+
+      let currentRoom = null;
+
+      socket.addEventListener('open', function (event) {
+        console.log('Connected to WebSocket server.');
+      });
+
+      socket.addEventListener('message', function (event) {
+        console.log('Message from server:', event.data);
+        handleServerMessage(event.data);
+      });
+
+      socket.addEventListener('close', function (event) {
+        console.log('WebSocket connection closed.');
+      });
+
+      socket.addEventListener('error', function (event) {
+        console.error('WebSocket error:', event);
+      });
+
+      function handleServerMessage(data) {
+        try {
+          const message = JSON.parse(data);
+          switch (message.type) {
+            case 'roomsList':
+              handleRoomsList(message.data);
+              break;
+            case 'joinedRoom':
+              handleJoinedRoom(message.data);
+              break;
+            case 'newClient':
+              handleNewClient(message.data);
+              break;
+            case 'clientLeft':
+              handleClientLeft(message.data);
+              break;
+            case 'message':
+              handleChatMessage(message.data);
+              break;
+            case 'error':
+              handleError(message.data);
+              break;
+            default:
+              console.warn('Unknown message type:', message.type);
+          }
+        } catch (error) {
+          console.error('Error parsing message from server:', error);
+        }
+      }
+
+      function handleRoomsList(data) {
+        const roomList = document.getElementById('roomList');
+        roomList.innerHTML = ''; // Clear existing rooms
+        data.forEach(function (room) {
+          const li = document.createElement('li');
+          li.textContent = room.name;
+          li.addEventListener('click', function () {
+            joinRoom(room.name);
+          });
+          roomList.appendChild(li);
+          // If we are in this room, update client list
+          if (room.name === currentRoom) {
+            updateClientList(room.clients);
+          }
+        });
+      }
+
+      function joinRoom(roomName) {
+        const message = {
+          type: 'joinRoom',
+          data: {
+            roomName: roomName,
+          },
+        };
+        socket.send(JSON.stringify(message));
+      }
+
+      function handleJoinedRoom(data) {
+        currentRoom = data.roomName;
+        document.getElementById('roomName').textContent =
+          'Room: ' + currentRoom;
+        document.getElementById('messageInput').disabled = false;
+        document.getElementById('sendButton').disabled = false;
+        document.getElementById('messages').innerHTML = '';
+        document.getElementById('clientList').innerHTML = '';
+      }
+
+      function handleNewClient(data) {
+        const clientId = data.clientId;
+        addClientToList(clientId);
+        addSystemMessage('Client ' + clientId + ' has joined the room.');
+      }
+
+      function handleClientLeft(data) {
+        const clientId = data.clientId;
+        removeClientFromList(clientId);
+        addSystemMessage('Client ' + clientId + ' has left the room.');
+      }
+
+      function handleChatMessage(data) {
+        const clientId = data.clientId;
+        const message = data.message;
+        addChatMessage(clientId, message);
+      }
+
+      function handleError(data) {
+        const message = data.message;
+        alert('Error: ' + message);
+      }
+
+      function addClientToList(clientId) {
+        const clientList = document.getElementById('clientList');
+        const li = document.createElement('li');
+        li.textContent = clientId;
+        li.id = 'client-' + clientId;
+        clientList.appendChild(li);
+      }
+
+      function removeClientFromList(clientId) {
+        const clientLi = document.getElementById('client-' + clientId);
+        if (clientLi) {
+          clientLi.parentNode.removeChild(clientLi);
+        }
+      }
+
+      function updateClientList(clients) {
+        const clientList = document.getElementById('clientList');
+        clientList.innerHTML = ''; // Clear existing clients
+        clients.forEach(function (clientId) {
+          addClientToList(clientId);
+        });
+      }
+
+      function addChatMessage(clientId, message) {
+        const messagesDiv = document.getElementById('messages');
+        const messageElement = document.createElement('div');
+        messageElement.innerHTML =
+          '<strong>' + clientId + ':</strong> ' + message;
+        messagesDiv.appendChild(messageElement);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+      }
+
+      function addSystemMessage(message) {
+        const messagesDiv = document.getElementById('messages');
+        const messageElement = document.createElement('div');
+        messageElement.style.fontStyle = 'italic';
+        messageElement.textContent = message;
+        messagesDiv.appendChild(messageElement);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+      }
+
+      const messageInput = document.getElementById('messageInput');
+      const sendButton = document.getElementById('sendButton');
+
+      sendButton.addEventListener('click', sendMessage);
+      messageInput.addEventListener('keyup', function (event) {
+        if (event.key === 'Enter') {
+          sendMessage();
+        }
+      });
+
+      function sendMessage() {
+        const message = messageInput.value.trim();
+        if (message !== '') {
+          const msg = {
+            type: 'message',
+            data: {
+              message: message,
+            },
+          };
+          socket.send(JSON.stringify(msg));
+          // Display your own message
+          addChatMessage('You', message);
+          messageInput.value = '';
+        }
+      }
+    </script>
+  </body>
+</html>
