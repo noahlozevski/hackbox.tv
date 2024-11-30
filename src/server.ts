@@ -163,9 +163,10 @@ function handleClientMessage(client: Client, messageContent: string) {
 function handleDisconnect(client: Client) {
   console.log(`Client disconnected: ${client.id}`);
   clients.delete(client.ws);
-  if (client.room) {
-    client.room.removeClient(client);
-    notifyRoomClientLeft(client.room, client.id);
+  const room = client.room;
+  if (room) {
+    room.removeClient(client);
+    notifyRoomClientLeft(room, client.id);
   }
 }
 
