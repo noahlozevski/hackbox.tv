@@ -54,7 +54,6 @@ setInterval(() => {
       clients.delete(websocket);
       if (client && client.room) {
         client.room.removeClient(client);
-        notifyRoomClientLeft(client.room, client.id);
       }
     } else {
       websocket.isAlive = false;
@@ -99,14 +98,8 @@ function handleMessage(client: Client, message: string) {
 function handleJoinRoom(client: Client, roomName: string) {
   const room = rooms.get(roomName);
   if (room) {
-    if (client.room) {
-      throw new Error(
-        'You are already in a room. You must leave the first one to join the another one',
-      );
-      // // Remove client from the previous room
-      // client.room.removeClient(client);
-      // notifyRoomClientLeft(client.room, client.id);
-    }
+    // Remove client from the previous room
+    client.room?.removeClient(client);
     room.addClient(client);
     console.log(`Client ${client.id} joined room ${room.name}`);
 
@@ -166,7 +159,6 @@ function handleDisconnect(client: Client) {
   const room = client.room;
   if (room) {
     room.removeClient(client);
-    notifyRoomClientLeft(room, client.id);
   }
 }
 
@@ -177,19 +169,6 @@ function broadcastToRoom(room: Room, message: string, sender?: Client) {
       client.ws.send(message);
     }
   });
-}
-
-// Notify room clients that a client has left
-function notifyRoomClientLeft(room: Room, clientId: string) {
-  broadcastToRoom(
-    room,
-    JSON.stringify({
-      type: 'clientLeft',
-      data: {
-        clientId: clientId,
-      },
-    }),
-  );
 }
 
 // Send an error message to the client

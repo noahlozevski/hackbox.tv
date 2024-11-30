@@ -15,11 +15,32 @@ export class Room {
   }
 
   removeClient(client: Client) {
-    this.clients.delete(client);
+    const wasDeleted = this.clients.delete(client);
+    if (!wasDeleted) {
+      return;
+    }
+
     client.room = null;
+    this.#broadcast(
+      JSON.stringify({
+        type: 'clientLeft',
+        data: {
+          clientId: client.id,
+        },
+      }),
+    );
   }
 
   getClientList(): string[] {
     return Array.from(this.clients).map((client) => client.id);
+  }
+
+  /** broadcast a message to all clients in the room */
+  #broadcast(message: string, sender?: Client) {
+    this.clients.forEach((client) => {
+      if (client !== sender) {
+        client.ws.send(message);
+      }
+    });
   }
 }
