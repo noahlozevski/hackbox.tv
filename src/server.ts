@@ -5,7 +5,8 @@ import { WS } from './types';
 
 // Server setup
 const PORT = 3000;
-const wss = new WebSocketServer({ port: PORT });
+const HOST = '0.0.0.0';
+const wss = new WebSocketServer({ port: PORT, host: HOST });
 console.log(`WebSocket server is running on ws://localhost:${PORT}`);
 
 const rooms: Map<string, Room> = new Map();

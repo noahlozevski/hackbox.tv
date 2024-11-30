@@ -84,6 +84,8 @@ runcmd:
   - ufw default allow outgoing
   - ufw allow OpenSSH
   - ufw allow 'Nginx Full'
+  ## for the websocket server
+  - ufw allow 3000
   - ufw --force enable
 
   ## Enable and start Fail2Ban service
@@ -95,7 +97,7 @@ runcmd:
   - su - noahlozevski -c 'cd /home/noahlozevski/app && npm install'
 
   ## Start the application with PM2
-  - su - noahlozevski -c 'pm2 start /home/noahlozevski/app/app.js --name hackbox-app'
+  - su - noahlozevski -c 'pm2 start /home/noahlozevski/app/dist/server.js --name hackbox-app'
   - su - noahlozevski -c 'pm2 startup systemd -u noahlozevski --hp /home/noahlozevski'
   - su - noahlozevski -c 'pm2 save'
 

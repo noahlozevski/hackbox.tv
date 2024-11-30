@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { Room } from './room';
 import { WS } from './types';
 
