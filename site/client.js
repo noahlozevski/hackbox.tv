@@ -5,6 +5,11 @@ const game = {
    */
   players: [],
   /**
+   * The current game being played
+   * @type {string}
+   */
+  currentGame: null,
+  /**
    * The current state of the game. This can be mutated to hold anything you want.
    * @type {object}
    */
@@ -17,6 +22,29 @@ const game = {
   },
   /** @type {WebSocket | null} */
   ws: null,
+
+  /**
+   * Handles a change in the list of players in the room
+   * @param {string[]} players - The new list of players
+   * @returns {void}
+   */
+  handlePlayersChanged: function(players) {
+    console.log('Players changed: ', players);
+    game.players = players;
+
+    for (const [gameName, { start, stop, canPlay }] of Object.entries(
+      window.games,
+    )) {
+      if (!canPlay(players.length)) {
+        console.log('Stopping game:', gameName);
+        // // kill the game
+        // if (gameName === game.currentGame) {
+        //   stop();
+        //   gameName.currentGame = null;
+        // }
+      }
+    }
+  },
 
   /**
    * Sends a message to all the other players in the room
@@ -89,7 +117,7 @@ function handleServerMessage(data) {
             (room) => room.name === game.state.currentRoom,
           );
           if (room) {
-            game.players = room.clients.sort();
+            game.handlePlayersChanged(room.clients.sort());
           }
         }
         break;
@@ -98,13 +126,17 @@ function handleServerMessage(data) {
         break;
       case 'newClient':
         handleNewClient(message.data);
-        game.players.push(message.data.clientId);
-        game.players.sort();
+        game.handlePlayersChanged(
+          [...game.players, message.data.clientId].sort(),
+        );
         break;
       case 'clientLeft':
         handleClientLeft(message.data);
-        game.players.filter((player) => player !== message.data.clientId);
-        game.players.sort();
+        game.handlePlayersChanged(
+          game.players
+            .filter((player) => player !== message.data.clientId)
+            .sort(),
+        );
         break;
       case 'message':
         const clientId = message.data.clientId;

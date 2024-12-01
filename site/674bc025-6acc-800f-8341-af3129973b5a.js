@@ -1,4 +1,4 @@
-(function() {
+window.game.startGame = (function() {
   // Wipe current UI
   document.body.innerHTML = '';
 
