@@ -17,6 +17,26 @@ const game = {
   },
   /** @type {WebSocket | null} */
   ws: null,
+
+  /**
+   * Called when the game starts
+   * This is where you can initialize your game state
+   */
+  onGameStart: function() {
+    console.log('Game started!');
+  },
+
+  /**
+   * Called when the game ends
+   * This is where you can clean up your game state
+   * and display a game over screen.
+   *
+   * The game should restart after this.
+   */
+  onGameEnd: function() {
+    console.log('Game ended!');
+  },
+
   /**
    * Sends a message to all the other players in the room
    * @param {string} event - the event type to send
