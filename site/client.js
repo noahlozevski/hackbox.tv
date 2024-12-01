@@ -77,7 +77,7 @@ function handleServerMessage(data) {
             (room) => room.name === game.state.currentRoom,
           );
           if (room) {
-            game.players = clients;
+            game.players = room.clients;
           }
         }
         break;
