@@ -19,25 +19,6 @@ const game = {
   ws: null,
 
   /**
-   * Called when the game starts
-   * This is where you can initialize your game state
-   */
-  onGameStart: function() {
-    console.log('Game started!');
-  },
-
-  /**
-   * Called when the game ends
-   * This is where you can clean up your game state
-   * and display a game over screen.
-   *
-   * The game should restart after this.
-   */
-  onGameEnd: function() {
-    console.log('Game ended!');
-  },
-
-  /**
    * Sends a message to all the other players in the room
    * @param {string} event - the event type to send
    * @param {string} message - The payload to send
@@ -108,7 +89,7 @@ function handleServerMessage(data) {
             (room) => room.name === game.state.currentRoom,
           );
           if (room) {
-            game.players = room.clients;
+            game.players = room.clients.sort();
           }
         }
         break;
@@ -118,10 +99,12 @@ function handleServerMessage(data) {
       case 'newClient':
         handleNewClient(message.data);
         game.players.push(message.data.clientId);
+        game.players.sort();
         break;
       case 'clientLeft':
         handleClientLeft(message.data);
         game.players.filter((player) => player !== message.data.clientId);
+        game.players.sort();
         break;
       case 'message':
         const clientId = message.data.clientId;
