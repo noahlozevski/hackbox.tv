@@ -166,8 +166,6 @@ function handleClientLeft(data) {
 }
 
 function handleChatMessage(clientId, message) {
-  const clientId = data.clientId;
-  const message = data.message;
   addChatMessage(clientId, message);
 }
 
