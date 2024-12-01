@@ -93,14 +93,13 @@ function handleServerMessage(data) {
         game.players.filter((player) => player !== message.data.clientId);
         break;
       case 'message':
-        if (message.data.message.event === 'chat') {
-          handleChatMessage(message.data);
+        const clientId = message.data.clientId;
+        const event = message.data.message.event;
+        const payload = message.data.message.payload;
+        game.onMessage(clientId, event, payload);
+        if (event === 'chat') {
+          handleChatMessage(clientId, payload);
         }
-        game.onMessage(
-          message.data.clientId,
-          message.data.message.event,
-          message.data.message.payload,
-        );
         break;
       case 'error':
         handleError(message.data);
@@ -166,7 +165,7 @@ function handleClientLeft(data) {
   addSystemMessage('Client ' + clientId + ' has left the room.');
 }
 
-function handleChatMessage(data) {
+function handleChatMessage(clientId, message) {
   const clientId = data.clientId;
   const message = data.message;
   addChatMessage(clientId, message);
