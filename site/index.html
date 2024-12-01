@@ -191,8 +191,15 @@
         background: #48bb78;
       }
 
-      .games button:hover {
-        background: #38a169;
+      .games button.unreleased {
+        background: #cbd5e0;
+        cursor: not-allowed;
+      }
+
+      only for non-mobile @media (hover: hover) {
+        .games button:not(.unreleased):hover {
+          background: #38a169;
+        }
       }
 
       /* Client list */
@@ -281,7 +288,13 @@
             <button id="connect-four" onclick="games.connectFour.start()">
               Connect Four
             </button>
-            <button id="tic-tac-toe">Tic-Tac-Toe</button>
+            <button
+              class="unreleased"
+              id="tic-tac-toe"
+              onclick="alert('Game coming soon!');"
+            >
+              Tic-Tac-Toe
+            </button>
           </div>
           <h3>Clients in Room:</h3>
           <ul id="clientList"></ul>
