@@ -1,16 +1,27 @@
 // Store the original body content to restore it later
-let originalContent = null;
+let original = {};
 
 function startGame() {
   // Store the original content
-  originalContent = document.body.innerHTML;
+  original = {
+    head: document.head.innerHTML,
+    body: document.body.innerHTML,
+    state: JSON.parse(JSON.stringify(game.state)),
+  };
 
   // Clear and style the body
   document.body.innerHTML = '';
-  document.body.style.margin = '0';
-  document.body.style.padding = '0';
-  document.body.style.backgroundColor = '#1a1a1a';
-  document.body.style.fontFamily = 'Arial, sans-serif';
+  const style = document.createElement('style');
+  style.id = 'connect-four-styles';
+  style.textContent = `
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #1a1a1a;
+      font-family: Arial, sans-serif;
+    }
+  `;
+  document.head.appendChild(style);
 
   // Initialize game state
   game.state = {
@@ -234,17 +245,9 @@ function startGame() {
 
 // Function to cleanup the game and restore original content
 function cleanupAndRestore() {
-  // Reset game state
-  game.state = {
-    playerId: game.state.playerId,
-    isResetting: false,
-  };
-
-  // Restore the original content
-  document.body.innerHTML = originalContent;
-
-  // Reattach the click event listener to the button
-  document.getElementById('connect-four').addEventListener('click', startGame);
+  game.state = original.state;
+  document.body.innerHTML = original.body;
+  document.head.innerHTML = original.head;
 }
 
 if (!window.games) {
