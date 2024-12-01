@@ -1,15 +1,19 @@
 const game = {
   /**
-   * Client IDs of the players in the room
-   * @type {string[]} */
+   * Client IDs of all players in the room
+   * @type {string[]}
+   */
   players: [],
   /**
    * The current state of the game. This can be mutated to hold anything you want.
-   * @type {{ currentRoom: string | null; }}
+   * @type {object}
    */
   state: {
-    /** @type {string | null} */
-    currentRoom: null,
+    /**
+     * The ID of the current player. This is set by the server when the player joins a room
+     * @type {string}
+     */
+    playerId: null,
   },
   /** @type {WebSocket | null} */
   ws: null,
@@ -69,6 +73,13 @@ function handleServerMessage(data) {
   try {
     const message = JSON.parse(data);
     switch (message.type) {
+      case 'connected':
+        console.log(
+          'Connected to server with client ID:',
+          message.data.clientId,
+        );
+        game.state.playerId = message.data.clientId;
+        break;
       case 'roomsList':
         handleRoomsList(message.data);
         // update the client list if we are in a room

@@ -25,6 +25,14 @@ wss.on('connection', (websocket: WebSocket) => {
 
   const client = new Client(ws);
   clients.set(ws, client);
+  ws.send(
+    JSON.stringify({
+      type: 'connected',
+      data: {
+        clientId: client.id,
+      },
+    }),
+  );
   console.log(`New client connected: ${client.id}`);
 
   // Send available rooms to the client
