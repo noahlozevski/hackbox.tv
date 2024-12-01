@@ -54,6 +54,9 @@
       article p {
         margin-bottom: 1rem;
       }
+      article p:only-child {
+        margin-bottom: 0;
+      }
 
       /* Layout containers */
       .container {
@@ -251,8 +254,8 @@
     <h1>hackbox.tv</h1>
     <article>
       <p>
-        Instructions: Select a room then click a game or chat with others. No
-        data is stored.
+        <strong>Instructions:</strong> Select a room then click a game or chat
+        with others. No data sent or received is stored on a server.
       </p>
     </article>
     <div class="container">
