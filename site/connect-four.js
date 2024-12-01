@@ -1,7 +1,16 @@
 // Store the original body content to restore it later
 let original = {};
 
+function canPlay() {
+  return game.players.length === 2;
+}
+
 function startGame() {
+  if (!canPlay()) {
+    alert('Need 2 players to start the game');
+    return;
+  }
+
   // Store the original content
   original = {
     head: document.head.innerHTML,
@@ -257,5 +266,5 @@ if (!window.games) {
 window.games.connectFour = {
   start: startGame,
   stop: cleanupAndRestore,
-  canPlay: (playerCount) => playerCount === 2,
+  canPlay,
 };

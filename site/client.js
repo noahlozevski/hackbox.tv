@@ -168,6 +168,7 @@ function handleRoomsList(data) {
   data.forEach(function(room) {
     const li = document.createElement('li');
     li.textContent = room.name;
+    li.dataset.roomCount = room.clients.length;
     li.addEventListener('click', function() {
       joinRoom(room.name);
     });
@@ -193,6 +194,7 @@ function handleJoinedRoom(data) {
   game.state.currentRoom = data.roomName;
   document.getElementById('roomName').textContent =
     'Room: ' + game.state.currentRoom;
+  // update room list
   document.getElementById('messageInput').disabled = false;
   document.getElementById('sendButton').disabled = false;
   document.getElementById('messages').innerHTML = '';

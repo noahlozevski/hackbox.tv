@@ -1,94 +1,293 @@
 <!doctype html>
-<html>
+<html lang="en">
   <head>
-    <title>Hackbox.tv.lozev.ski</title>
     <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hackbox.tv.lozev.ski</title>
     <script src="client.js" defer></script>
     <script src="connect-four.js" defer></script>
     <style>
-      /* Basic styles for the chat client */
-      #rooms {
-        border: 1px solid #ccc;
-        padding: 10px;
-        width: 200px;
-        float: left;
-      }
-      #chat {
-        border: 1px solid #ccc;
-        padding: 10px;
-        margin-left: 210px;
-      }
-      #messages {
-        height: 300px;
-        overflow-y: scroll;
-        border: 1px solid #ccc;
-        padding: 5px;
-        margin-bottom: 10px;
-      }
-      #clients {
-        margin-top: 10px;
-        border-top: 1px solid #ccc;
-        padding-top: 5px;
-      }
-      #clients ul {
-        list-style-type: none;
+      /* Reset and base styles */
+      * {
+        margin: 0;
         padding: 0;
-      }
-      #clients li {
-        margin-bottom: 5px;
+        box-sizing: border-box;
       }
 
-      /* Additional styles */
       body {
-        font-family: Arial, sans-serif;
-      }
-      #sendButton {
-        margin-left: 10px;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+          Oxygen-Sans, Ubuntu, Cantarell, sans-serif;
+        line-height: 1.6;
+        color: #333;
+        background-color: #f5f5f5;
+        padding: 1rem;
+        max-width: 1200px;
+        margin: 0 auto;
       }
 
-      .games {
-        display: flex;
-        align-items: center;
-        margin-bottom: 10px;
+      h1 {
+        color: #2c3e50;
+        margin-bottom: 1rem;
+        font-size: 2rem;
       }
-      .games button {
-        padding: 6px 10px;
-        margin-right: 10px;
-        background: none;
-        border: 2px #cbcbcb solid;
+
+      h2 {
+        color: #34495e;
+        margin-bottom: 0.8rem;
+        font-size: 1.4rem;
+      }
+
+      h3 {
+        color: #34495e;
+        margin-bottom: 0.6rem;
+        font-size: 1.2rem;
+      }
+
+      article {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        margin-bottom: 1.5rem;
+      }
+
+      article p {
+        margin-bottom: 1rem;
+      }
+
+      /* Layout containers */
+      .container {
+        display: grid;
+        grid-template-columns: 300px 1fr;
+        gap: 1.5rem;
+        margin-top: 1.5rem;
+      }
+
+      /* Rooms section */
+      #rooms {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      #roomList {
+        list-style: none;
+      }
+
+      #roomList li {
+        padding: 0.8rem;
         border-radius: 6px;
+        margin-bottom: 0.5rem;
+        background: #f8f9fa;
+        cursor: pointer;
+        transition: background-color 0.2s;
+      }
+
+      #roomList li[data-room-count]::after {
+        content: '(' attr(data-room-count) ' players)';
+        float: right;
+        opacity: 0.6;
+      }
+
+      #roomList li[data-room-count="1"]::after {
+        content: '(' attr(data-room-count) ' player)';
+        float: right;
+        opacity: 0.6;
+      }
+
+      #roomList li:hover {
+        background: #e9ecef;
+      }
+
+      /* Chat section */
+      #chat {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        display: flex;
+        flex-direction: column;
+        height: calc(100vh - 200px);
+        min-height: 500px;
+      }
+
+      #messages {
+        flex-grow: 1;
+        overflow-y: auto;
+        padding: 1rem;
+        background: #f8f9fa;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+      }
+
+      #messages div {
+        margin-bottom: 0.5rem;
+        padding: 0.5rem;
+        border-radius: 4px;
+        background: white;
+      }
+
+      #messages div.system {
+        font-style: italic;
+        color: #6c757d;
+        background: transparent;
+      }
+
+      /* Input area */
+      .input-group {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+      }
+
+      #messageInput {
+        flex-grow: 1;
+        padding: 0.8rem;
+        border: 1px solid #ced4da;
+        border-radius: 6px;
+        font-size: 1rem;
+      }
+
+      #messageInput:focus {
+        outline: none;
+        border-color: #4299e1;
+        box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.2);
       }
 
       button {
+        padding: 0.8rem 1.5rem;
+        background: #4299e1;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 1rem;
+        transition: background-color 0.2s;
+      }
+
+      button:hover {
+        background: #3182ce;
+      }
+
+      button:disabled {
+        background: #cbd5e0;
+        cursor: not-allowed;
+      }
+
+      /* Games section */
+      .games {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+        align-items: center;
+      }
+
+      .games button {
+        background: #48bb78;
+      }
+
+      .games button:hover {
+        background: #38a169;
+      }
+
+      /* Client list */
+      #clients {
+        margin-top: auto;
+        border-top: 1px solid #e2e8f0;
+        padding-top: 1rem;
+      }
+
+      #clientList {
+        list-style: none;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+      }
+
+      #clientList li {
+        background: #edf2f7;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.9rem;
+      }
+
+      /* Mobile responsiveness */
+      @media (max-width: 768px) {
+        .container {
+          grid-template-columns: 1fr;
+        }
+
+        #chat {
+          height: calc(100vh - 400px);
+        }
+
+        .games {
+          flex-direction: column;
+          align-items: stretch;
+        }
+
+        .games button {
+          width: 100%;
+        }
+
+        h1 {
+          font-size: 1.5rem;
+        }
+
+        article {
+          padding: 1rem;
+        }
+
+        #rooms,
+        #chat {
+          padding: 1rem;
+        }
       }
     </style>
   </head>
   <body>
     <h1>hackbox.tv</h1>
-    <div id="rooms">
-      <h2>Available Rooms</h2>
-      <ul id="roomList"></ul>
-    </div>
-    <div id="chat">
-      <h2 id="roomName">Not in a room</h2>
-      <div id="messages"></div>
-      <input
-        type="text"
-        id="messageInput"
-        placeholder="Type a message..."
-        disabled
-      />
-      <button id="sendButton" disabled>Send</button>
-      <div id="clients">
-        <div class="games">
-          <div>Available Games:&nbsp;&nbsp;</div>
-          <button id="connect-four" onclick="games.connectFour.start()">
-            Connect Four
-          </button>
-          <button id="tic-tac-toe">Tic-Tac-Toe</button>
+    <article>
+      <p>
+        Click a room, and watch the chat update in real-time. Open this page in
+        multiple tabs or on multiple devices to see the real-time updates in
+        action.
+      </p>
+      <p>
+        Click a button to start a game with another client in the room. You will
+        be brought back to this page after the game ends.
+      </p>
+    </article>
+    <div class="container">
+      <div id="rooms">
+        <h2>Available Rooms</h2>
+        <ul id="roomList"></ul>
+      </div>
+      <div id="chat">
+        <h2 id="roomName">Not in a room</h2>
+        <div id="messages"></div>
+        <div class="input-group">
+          <input
+            type="text"
+            id="messageInput"
+            placeholder="Type a message..."
+            disabled
+          />
+          <button id="sendButton" disabled>Send</button>
         </div>
-        <h3>Clients in Room:</h3>
-        <ul id="clientList"></ul>
+        <div id="clients">
+          <div class="games">
+            <div>Available Games:</div>
+            <button id="connect-four" onclick="games.connectFour.start()">
+              Connect Four
+            </button>
+            <button id="tic-tac-toe">Tic-Tac-Toe</button>
+          </div>
+          <h3>Clients in Room:</h3>
+          <ul id="clientList"></ul>
+        </div>
       </div>
     </div>
   </body>

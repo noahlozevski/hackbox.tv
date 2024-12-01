@@ -51,6 +51,13 @@ wss.on('connection', (websocket: WebSocket) => {
   });
 });
 
+// Send updated room list info every 2 seconds to those connected
+setInterval(() => {
+  clients.forEach((client) => {
+    sendAvailableRooms(client);
+  });
+}, 2_000);
+
 // Heartbeat mechanism to detect stale clients
 setInterval(() => {
   wss.clients.forEach((ws) => {
@@ -68,7 +75,7 @@ setInterval(() => {
       websocket.ping();
     }
   });
-}, 30000); // Ping every 30 seconds
+}, 30_000); // Ping every 30 seconds
 
 function sendAvailableRooms(client: Client) {
   const roomsInfo = Array.from(rooms.values()).map((room) => ({
