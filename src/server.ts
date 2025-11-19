@@ -28,6 +28,23 @@ roomNames.forEach((roomName) => {
   rooms.set(roomName, new Room(roomName));
 });
 
+function getOrCreateRoom(roomName: string): Room | null {
+  const sanitized = roomName.trim();
+  if (!sanitized || sanitized.length > 32) {
+    return null;
+  }
+  const safeName = sanitized.replace(/[^\w-]/g, '');
+  if (!safeName) return null;
+
+  let room = rooms.get(safeName);
+  if (!room) {
+    room = new Room(safeName);
+    rooms.set(safeName, room);
+    console.log(`Created new room: ${safeName}`);
+  }
+  return room;
+}
+
 // Handle new client connections
 wss.on('connection', (websocket: WebSocket) => {
   const ws = websocket as WS;
@@ -183,24 +200,25 @@ function handleMessage(client: Client, message: string) {
 }
 
 function handleJoinRoom(client: Client, roomName: string) {
-  const room = rooms.get(roomName);
-  if (room) {
-    // Remove client from the previous room
-    client.room?.removeClient(client);
-    room.addClient(client);
-    console.log(`Client ${client.id} joined room ${room.name}`);
-
-    // Notify the client
-    MessageBuilder.sendJoinedRoom(client, room.name, room.getClientList());
-
-    // Notify other clients in the room
-    MessageBuilder.broadcastNewClient(room, client.id, client.name, client);
-
-    // Send updated room info to the client
-    sendAvailableRooms(client);
-  } else {
+  const room = getOrCreateRoom(roomName);
+  if (!room) {
     MessageBuilder.sendError(client, 'Room does not exist');
+    return;
   }
+
+  // Remove client from the previous room
+  client.room?.removeClient(client);
+  room.addClient(client);
+  console.log(`Client ${client.id} joined room ${room.name}`);
+
+  // Notify the client
+  MessageBuilder.sendJoinedRoom(client, room.name, room.getClientList());
+
+  // Notify other clients in the room
+  MessageBuilder.broadcastNewClient(room, client.id, client.name, client);
+
+  // Send updated room info to the client
+  sendAvailableRooms(client);
 }
 
 // Handle messages sent by the client

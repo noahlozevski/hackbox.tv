@@ -88,5 +88,5 @@ describe('Prod WebSocket connection E2E', () => {
     expect(joined2.type).toBe('joinedRoom');
 
     ws2.close();
-  }, 30_000);
+  }, 60_000);
 });

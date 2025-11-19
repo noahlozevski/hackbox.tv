@@ -128,8 +128,12 @@ window.startGame = async (
   // Store reference to original stop if not already wrapped
   if (!gameEntry._originalStop) {
     gameEntry._originalStop = gameEntry.stop;
-    // Wrap the stop method to broadcast stop event and save state
-    gameEntry.stop = function (clearState = false) {
+    // Wrap the stop method to broadcast stop event and save/clear state
+    gameEntry.stop = function (clearStateArg?: boolean) {
+      // Hidden E2E test game should clear server state on stop to avoid auto-resume
+      const defaultClearState = gameId === 'e2eTest';
+      const clearState = clearStateArg ?? defaultClearState;
+
       // Save state first, then stop game (unless we're clearing)
       const savedState =
         !clearState && gameEntry.saveState ? gameEntry.saveState() : null;

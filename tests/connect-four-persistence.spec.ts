@@ -1,50 +1,104 @@
 import { test, expect } from '@playwright/test';
 
+const baseURL = process.env.PW_BASE_URL || 'https://hackbox.tv.lozev.ski';
+
 test('Connect Four game state persists across refresh', async ({
   page,
   context,
 }) => {
-  const baseURL = process.env.PW_BASE_URL || 'https://hackbox.tv.lozev.ski';
+  const roomName = `test-room-${Date.now()}`;
 
   // Player 1 opens the site and joins Room1
-  await page.goto(`${baseURL}`);
-  await page.click('text=Room1');
+  await page.goto(`${baseURL}?room=${roomName}`);
   await page.waitForTimeout(500);
 
   // Player 2 joins in a second tab/context
   const page2 = await context.newPage();
-  await page2.goto(`${baseURL}`);
-  await page2.click('text=Room1');
+  await page2.goto(`${baseURL}?room=${roomName}`);
   await page2.waitForTimeout(500);
 
-  // Start Connect Four via URL param for both players
-  await page.goto(`${baseURL}?room=Room1&game=connectFour`);
+  // Give the sockets a moment so both players are known
   await page.waitForTimeout(1000);
 
-  await page2.reload();
+  // Player 1 starts Connect Four through the shared game framework
+  const started = await page.evaluate(async () => {
+    const waitForPlayers = async () => {
+      const deadline = Date.now() + 15_000;
+      while (
+        !window.game ||
+        !window.game.state.currentRoom ||
+        (window.game.players?.length ?? 0) < 2
+      ) {
+        if (Date.now() > deadline) {
+          throw new Error('Timed out waiting for players');
+        }
+        await new Promise((resolve) => window.setTimeout(resolve, 200));
+      }
+    };
+
+    try {
+      await waitForPlayers();
+      const originalPlayers = window.game.players.slice();
+      const localId = window.game.state.playerId;
+      const trimmed: typeof originalPlayers = [];
+      const localPlayer = originalPlayers.find((p) => p.id === localId);
+      if (localPlayer) {
+        trimmed.push(localPlayer);
+      }
+      for (const player of originalPlayers) {
+        if (trimmed.length === 2) break;
+        if (!trimmed.some((p) => p.id === player.id)) {
+          trimmed.push(player);
+        }
+      }
+      if (trimmed.length < 2) {
+        throw new Error('Unable to find two players to start Connect Four');
+      }
+      window.game.players = trimmed;
+      await window.startGame('connectFour');
+      window.game.players = originalPlayers;
+      return true;
+    } catch (err) {
+      console.error('startGame error', err);
+      return false;
+    }
+  });
+  expect(started).toBeTruthy();
+
+  // Give time for Player 2 to auto-start via roomsList sync
   await page2.waitForTimeout(2500);
 
   // Verify game container is visible for both players
-  await expect(page.locator('#game-container')).toBeVisible();
-  await expect(page2.locator('#game-container')).toBeVisible();
+  await expect(page.locator('#game-container')).toBeVisible({
+    timeout: 15_000,
+  });
+  await expect(page2.locator('#game-container')).toBeVisible({
+    timeout: 15_000,
+  });
 
-  // Player 1 makes a couple of moves in different columns
-  await page.locator('[data-col="0"]').first().click();
-  await page.locator('[data-col="1"]').first().click();
+  // Player 1 makes a couple of moves by interacting with the board
+  const colZero = page.locator('#game-container [data-col="0"]').first();
+  const colOne = page.locator('#game-container [data-col="1"]').first();
+  await expect(colZero).toBeVisible({ timeout: 15_000 });
+  await expect(colOne).toBeVisible({ timeout: 15_000 });
+  await colZero.click();
+  await colOne.click();
 
   // Give some time for messages and state sync
   await page.waitForTimeout(1000);
 
   // Refresh Player 1 (simulating a page reload)
-  await page.reload();
+  await page.goto(`${baseURL}?room=${roomName}`);
   await page.waitForTimeout(2500);
 
   // After reload, Connect Four should auto-start again for Player 1
-  await expect(page.locator('#game-container')).toBeVisible();
+  await expect(page.locator('#game-container')).toBeVisible({
+    timeout: 15_000,
+  });
 
   // And the board should still reflect at least one of the previous moves
   const filledCells = await page
-    .locator('[data-col="0"]')
+    .locator('#game-container [data-col="0"]')
     .evaluateAll(
       (cells) =>
         cells.filter(

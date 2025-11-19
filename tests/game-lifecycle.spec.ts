@@ -1,36 +1,37 @@
 import { test, expect } from '@playwright/test';
 
 const baseURL = process.env.PW_BASE_URL || 'http://localhost:3000';
+const gotoOptions = { waitUntil: 'domcontentloaded' as const };
 
 test('game lifecycle: start, stop, and state persistence', async ({
   page,
   context,
 }) => {
   // Clear storage
-  await page.goto(baseURL);
+  await page.goto(baseURL, gotoOptions);
   await page.evaluate(() => window.localStorage.clear());
 
   // Create two browser contexts to simulate two players
   const page2 = await context.newPage();
-  await page2.goto(baseURL);
+  await page2.goto(baseURL, gotoOptions);
 
   // Wait for connection
   await page.waitForTimeout(500);
   await page2.waitForTimeout(500);
 
   // Both players join the same room
-  const roomName = 'TestRoom' + Date.now();
+  const roomName = `test-room-${Date.now()}`;
 
   // Player 1 joins room
-  await page.click(`text=${roomName.substring(0, 8)}`); // Click first room
+  await page.goto(`${baseURL}?room=${roomName}`, gotoOptions);
   await page.waitForTimeout(200);
 
   // Player 2 joins same room
-  await page2.click(`text=${roomName.substring(0, 8)}`);
+  await page2.goto(`${baseURL}?room=${roomName}`, gotoOptions);
   await page2.waitForTimeout(200);
 
   // Player 1 starts the E2E test game
-  await page.goto(`${baseURL}?room=${roomName}&game=e2eTest`);
+  await page.goto(`${baseURL}?room=${roomName}&game=e2eTest`, gotoOptions);
   await page.waitForTimeout(500);
 
   // Verify game started for player 1
@@ -38,7 +39,7 @@ test('game lifecycle: start, stop, and state persistence', async ({
   await expect(page.locator('#e2e-test-value')).toHaveText('Counter: 0');
 
   // Player 2 should also see the game auto-start
-  await page2.reload();
+  await page2.goto(`${baseURL}?room=${roomName}`, gotoOptions);
   await page2.waitForTimeout(2500); // Wait for roomsList polling
   await expect(page2.locator('#e2e-test-game')).toBeVisible();
 
@@ -65,12 +66,12 @@ test('game lifecycle: start, stop, and state persistence', async ({
   await expect(page2.locator('#e2e-test-game')).not.toBeVisible();
 
   // CRITICAL TEST: Player 1 refreshes - game should NOT auto-start
-  await page.reload();
+  await page.goto(`${baseURL}?room=${roomName}`, gotoOptions);
   await page.waitForTimeout(2500); // Wait for roomsList polling
   await expect(page.locator('#e2e-test-game')).not.toBeVisible();
 
   // But if player 1 manually starts the game again, it should load saved state
-  await page.goto(`http://localhost:3000?room=${roomName}&game=e2eTest`);
+  await page.goto(`${baseURL}?room=${roomName}&game=e2eTest`, gotoOptions);
   await page.waitForTimeout(500);
 
   await expect(page.locator('#e2e-test-game')).toBeVisible();
@@ -81,15 +82,13 @@ test('game lifecycle: start, stop, and state persistence', async ({
 });
 
 test('stopped game should not auto-resume on refresh', async ({ page }) => {
-  await page.goto(baseURL);
+  const roomName = `test-room-${Date.now()}`;
+  await page.goto(`${baseURL}?room=${roomName}`, gotoOptions);
   await page.evaluate(() => window.localStorage.clear());
 
   // Join a room
-  await page.click('text=Room1');
-  await page.waitForTimeout(200);
-
   // Start E2E test game
-  await page.goto(`${baseURL}?room=Room1&game=e2eTest`);
+  await page.goto(`${baseURL}?room=${roomName}&game=e2eTest`, gotoOptions);
   await page.waitForTimeout(500);
 
   // Verify game started
@@ -112,7 +111,7 @@ test('stopped game should not auto-resume on refresh', async ({ page }) => {
   await expect(page.locator('#e2e-test-game')).not.toBeVisible();
 
   // CRITICAL: Refresh page - game should NOT auto-start
-  await page.reload();
+  await page.goto(`${baseURL}?room=${roomName}`, gotoOptions);
   await page.waitForTimeout(3000); // Wait for multiple roomsList updates
 
   await expect(page.locator('#e2e-test-game')).not.toBeVisible();
