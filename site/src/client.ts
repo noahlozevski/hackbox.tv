@@ -209,6 +209,19 @@ if (!window.games) {
 connection.connect('/ws/');
 game.ws = connection.getWebSocket();
 
+function scheduleRoomJoin(roomName: string, attempt = 0): void {
+  const ws = connection.getWebSocket();
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    joinRoom(roomName);
+    return;
+  }
+  if (attempt >= 20) {
+    console.warn('Failed to auto-join room after multiple attempts:', roomName);
+    return;
+  }
+  window.setTimeout(() => scheduleRoomJoin(roomName, attempt + 1), 200);
+}
+
 // Check URL for room and game parameters on initial load
 const urlParams = new URLSearchParams(window.location.search);
 const roomParam = urlParams.get('room');
@@ -218,17 +231,14 @@ const gameParam = urlParams.get('game');
 const persisted = connection.getPersistedState();
 const roomToJoin = roomParam || persisted?.lastRoom;
 if (roomToJoin) {
-  // wait a tick so the socket has a chance to open
-  window.setTimeout(() => {
-    joinRoom(roomToJoin);
+  scheduleRoomJoin(roomToJoin);
 
-    // If there's a game parameter, auto-start it after joining
-    if (gameParam) {
-      window.setTimeout(() => {
-        window.startGame(gameParam);
-      }, 500);
-    }
-  }, 200);
+  // If there's a game parameter, auto-start it after joining
+  if (gameParam) {
+    window.setTimeout(() => {
+      window.startGame(gameParam);
+    }, 700);
+  }
 }
 
 connection.addMessageListener((message: ServerMessage) => {
@@ -391,6 +401,9 @@ function handleRoomsList(
 function joinRoom(roomName: string): void {
   MessageBuilder.sendJoinRoom(connection.getWebSocket(), roomName);
 }
+
+(window as typeof window & { joinRoom?: (roomName: string) => void }).joinRoom =
+  joinRoom;
 
 function handleJoinedRoom(
   roomName: string,

@@ -1,7 +1,29 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, Page } from '@playwright/test';
+
+declare global {
+  interface Window {
+    joinRoom?: (room: string) => void;
+  }
+}
 
 const baseURL = process.env.PW_BASE_URL || 'http://localhost:3000';
 const gotoOptions = { waitUntil: 'domcontentloaded' as const };
+
+async function waitForRoom(page: Page, room: string) {
+  await page.waitForFunction(
+    (expectedRoom) => window.game?.state?.currentRoom === expectedRoom,
+    {},
+    room,
+  );
+}
+
+async function joinRoomExplicit(page: Page, room: string) {
+  await page.waitForFunction(() => typeof window.joinRoom === 'function');
+  await page.evaluate((targetRoom) => {
+    window.joinRoom?.(targetRoom);
+  }, room);
+  await waitForRoom(page, room);
+}
 
 test('game lifecycle: start, stop, and state persistence', async ({
   page,
@@ -24,10 +46,12 @@ test('game lifecycle: start, stop, and state persistence', async ({
 
   // Player 1 joins room
   await page.goto(`${baseURL}?room=${roomName}`, gotoOptions);
+  await joinRoomExplicit(page, roomName);
   await page.waitForTimeout(200);
 
   // Player 2 joins same room
   await page2.goto(`${baseURL}?room=${roomName}`, gotoOptions);
+  await joinRoomExplicit(page2, roomName);
   await page2.waitForTimeout(200);
 
   // Player 1 starts the E2E test game
@@ -40,6 +64,7 @@ test('game lifecycle: start, stop, and state persistence', async ({
 
   // Player 2 should also see the game auto-start
   await page2.goto(`${baseURL}?room=${roomName}`, gotoOptions);
+  await joinRoomExplicit(page2, roomName);
   await page2.waitForTimeout(2500); // Wait for roomsList polling
   await expect(page2.locator('#e2e-test-game')).toBeVisible();
 
@@ -67,6 +92,7 @@ test('game lifecycle: start, stop, and state persistence', async ({
 
   // CRITICAL TEST: Player 1 refreshes - game should NOT auto-start
   await page.goto(`${baseURL}?room=${roomName}`, gotoOptions);
+  await joinRoomExplicit(page, roomName);
   await page.waitForTimeout(2500); // Wait for roomsList polling
   await expect(page.locator('#e2e-test-game')).not.toBeVisible();
 
@@ -84,6 +110,7 @@ test('game lifecycle: start, stop, and state persistence', async ({
 test('stopped game should not auto-resume on refresh', async ({ page }) => {
   const roomName = `test-room-${Date.now()}`;
   await page.goto(`${baseURL}?room=${roomName}`, gotoOptions);
+  await joinRoomExplicit(page, roomName);
   await page.evaluate(() => window.localStorage.clear());
 
   // Join a room
