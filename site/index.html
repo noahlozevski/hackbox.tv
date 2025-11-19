@@ -113,23 +113,32 @@
         margin-bottom: 0.5rem;
         background: #f8f9fa;
         cursor: pointer;
-        transition: background-color 0.2s;
+        transition: all 0.2s;
+        border: 2px solid transparent;
       }
 
       #roomList li[data-room-count]::after {
         content: '(' attr(data-room-count) ' players)';
         float: right;
         opacity: 0.6;
+        font-size: 0.9rem;
       }
 
       #roomList li[data-room-count='1']::after {
         content: '(' attr(data-room-count) ' player)';
         float: right;
         opacity: 0.6;
+        font-size: 0.9rem;
       }
 
       #roomList li:hover {
         background: #e9ecef;
+      }
+
+      #roomList li.active {
+        background: #e3f2fd;
+        border-color: #4299e1;
+        font-weight: 600;
       }
 
       /* Chat section */
@@ -210,26 +219,93 @@
 
       /* Games section */
       .games {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.5rem;
+        display: grid;
+        gap: 0.75rem;
         margin-bottom: 1rem;
+      }
+
+      .games h3 {
+        margin-bottom: 0.5rem;
+        font-size: 1rem;
+      }
+
+      .game-item {
+        display: flex;
         align-items: center;
+        justify-content: space-between;
+        padding: 0.75rem;
+        background: #f8f9fa;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: background-color 0.2s;
+        border: 2px solid transparent;
       }
 
-      .games button {
-        background: #48bb78;
+      .game-item:hover:not(.disabled) {
+        background: #e9ecef;
       }
 
-      .games button.unreleased {
-        background: #cbd5e0;
+      .game-item.disabled {
+        opacity: 0.5;
         cursor: not-allowed;
       }
 
-      @media (hover: hover) {
-        .games button:not(.unreleased):hover {
-          background: #38a169;
-        }
+      .game-item.ready {
+        background: #e6ffed;
+        border-color: #48bb78;
+      }
+
+      .game-name {
+        font-weight: 500;
+        flex: 1;
+      }
+
+      .game-players {
+        font-size: 0.85rem;
+        color: #666;
+        margin-left: 0.5rem;
+      }
+
+      .game-players.ready {
+        color: #48bb78;
+        font-weight: 600;
+      }
+
+      .game-players.waiting {
+        color: #e53e3e;
+      }
+
+      /* QR Code section */
+      #qr-container {
+        background: #f8f9fa;
+        padding: 1rem;
+        border-radius: 6px;
+        text-align: center;
+        margin-bottom: 1rem;
+        border: 1px solid #e2e8f0;
+      }
+
+      #qr-container h4 {
+        margin: 0 0 0.5rem 0;
+        font-size: 0.9rem;
+        color: #666;
+      }
+
+      #qr-code {
+        display: inline-block;
+        margin: 0.5rem 0;
+      }
+
+      #qr-code img {
+        display: block;
+      }
+
+      #share-url {
+        word-break: break-all;
+        font-family: monospace;
+        font-size: 0.75rem;
+        color: #666;
+        margin: 0.5rem 0 0 0;
       }
 
       /* Client list */
@@ -306,11 +382,6 @@
         with others. No data sent or received is stored on a server.
       </p>
     </article>
-    <article id="qr-container" style="display: none; text-align: center;">
-      <h3>Share this room</h3>
-      <div id="qr-code" style="display: inline-block; margin: 1rem 0;"></div>
-      <p id="share-url" style="word-break: break-all; font-family: monospace; font-size: 0.9rem;"></p>
-    </article>
     <div class="container">
       <div id="rooms">
         <h2>Available Rooms</h2>
@@ -318,6 +389,11 @@
       </div>
       <div id="chat">
         <h2 id="roomName">Not in a room</h2>
+        <div id="qr-container" style="display: none;">
+          <h4>Share this room</h4>
+          <div id="qr-code"></div>
+          <div id="share-url"></div>
+        </div>
         <div id="messages"></div>
         <div class="input-group">
           <input
@@ -330,40 +406,8 @@
         </div>
         <div id="clients">
           <div class="games">
-            <div>Available Games:</div>
-            <button id="connect-four" onclick="startGame('connectFour')">
-              Connect Four
-            </button>
-            <button id="marble-race" onclick="startGame('marbleRace')">
-              Marble Race
-            </button>
-            <button id="tilt-pong" onclick="startGame('tiltPong')">
-              Tilt Pong
-            </button>
-            <button id="arena-bumpers" onclick="startGame('arenaBumpers')">
-              Arena Bumpers
-            </button>
-            <button id="frogger" onclick="startGame('frogger')">
-              Frogger
-            </button>
-            <button
-              id="tic-tac-toe"
-              onclick="startGame('ticTacToe')"
-            >
-              Tic-Tac-Toe
-            </button>
-            <button
-              id="rock-paper-scissors"
-              onclick="startGame('rockPaperScissors')"
-            >
-              Rock Paper Scissors
-            </button>
-            <button
-              id="lightcycle"
-              onclick="startGame('lightcycle')"
-            >
-              Lightcycles
-            </button>
+            <h3>Available Games</h3>
+            <div id="game-list"></div>
           </div>
           <h3>Clients in Room:</h3>
           <ul id="clientList"></ul>

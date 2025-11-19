@@ -117,6 +117,8 @@ game.handlePlayersChanged = function (players: string[]): void {
       // Future: Auto-stop games when player count is insufficient
     }
   }
+
+  updateGamesList();
 };
 
 game.onMessage = function (
@@ -239,11 +241,15 @@ function handleRoomsList(
   const roomList = document.getElementById('roomList');
   if (!roomList) return;
 
+  const currentRoom = game.state.currentRoom;
   roomList.innerHTML = '';
   rooms.forEach(function (room) {
     const li = document.createElement('li');
     li.textContent = room.name;
     li.dataset.roomCount = String(room.clients.length);
+    if (currentRoom === room.name) {
+      li.classList.add('active');
+    }
     li.addEventListener('click', function () {
       joinRoom(room.name);
     });
@@ -277,6 +283,7 @@ function handleJoinedRoom(roomName: string, clients: string[]): void {
 
   updateClientList(clients);
   updateQRCode(roomName);
+  updateGamesList();
 }
 
 function updateQRCode(roomName: string): void {
@@ -295,17 +302,89 @@ function updateQRCode(roomName: string): void {
   // Clear any existing QR code
   qrCodeDiv.innerHTML = '';
 
-  // Generate new QR code
+  // Generate new QR code (smaller size)
   if (window.QRCode) {
     new window.QRCode(qrCodeDiv, {
       text: shareUrl,
-      width: 200,
-      height: 200,
+      width: 128,
+      height: 128,
     });
   }
 
   // Update the URL text
   shareUrlEl.textContent = shareUrl;
+}
+
+const gameInfo: Record<
+  string,
+  { name: string; minPlayers: number; maxPlayers?: number }
+> = {
+  connectFour: { name: 'Connect Four', minPlayers: 2, maxPlayers: 2 },
+  marbleRace: { name: 'Marble Race', minPlayers: 2 },
+  tiltPong: { name: 'Tilt Pong', minPlayers: 2 },
+  arenaBumpers: { name: 'Arena Bumpers', minPlayers: 2 },
+  frogger: { name: 'Frogger', minPlayers: 1 },
+  ticTacToe: { name: 'Tic-Tac-Toe', minPlayers: 2, maxPlayers: 2 },
+  rockPaperScissors: { name: 'Rock Paper Scissors', minPlayers: 2 },
+  lightcycle: { name: 'Lightcycles', minPlayers: 2 },
+};
+
+function updateGamesList(): void {
+  const gameListEl = document.getElementById('game-list');
+  if (!gameListEl) return;
+
+  gameListEl.innerHTML = '';
+
+  const games = window.games ?? {};
+  const playerCount = game.players.length;
+
+  Object.entries(gameInfo).forEach(([gameId, info]) => {
+    const gameEntry = games[gameId];
+    const canPlay =
+      gameEntry && typeof gameEntry.canPlay === 'function'
+        ? gameEntry.canPlay()
+        : false;
+
+    const item = document.createElement('div');
+    item.className = 'game-item';
+
+    if (canPlay) {
+      item.classList.add('ready');
+    } else {
+      item.classList.add('disabled');
+    }
+
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'game-name';
+    nameSpan.textContent = info.name;
+
+    const playersSpan = document.createElement('span');
+    playersSpan.className = 'game-players';
+
+    if (canPlay) {
+      playersSpan.classList.add('ready');
+      playersSpan.textContent = '✓ Ready';
+    } else {
+      playersSpan.classList.add('waiting');
+      const needed = info.minPlayers - playerCount;
+      if (needed === 1) {
+        playersSpan.textContent = `Need ${needed} more`;
+      } else {
+        playersSpan.textContent = `Need ${needed} more`;
+      }
+    }
+
+    item.appendChild(nameSpan);
+    item.appendChild(playersSpan);
+
+    if (canPlay) {
+      item.addEventListener('click', () => {
+        window.startGame(gameId);
+      });
+    }
+
+    gameListEl.appendChild(item);
+  });
 }
 
 function handleNewClient(clientId: string): void {
