@@ -166,13 +166,21 @@ setInterval(() => {
 }, 30_000); // Ping every 30 seconds
 
 function sendAvailableRooms(client: Client) {
-  const roomsInfo = Array.from(rooms.values()).map((room) => ({
-    name: room.name,
-    clients: room.getClientList(),
-    activeGame: room.activeGame,
-    gameState: room.gameState,
-    gameTimeout: room.gameTimeout,
-  }));
+  const roomsInfo = Array.from(rooms.values())
+    .filter((room) => {
+      if (client.room && room.name === client.room.name) {
+        return true;
+      }
+      // Hide obviously test/e2e rooms from casual customers
+      return !/^e2e-|^test-/.test(room.name);
+    })
+    .map((room) => ({
+      name: room.name,
+      clients: room.getClientList(),
+      activeGame: room.activeGame,
+      gameState: room.gameState,
+      gameTimeout: room.gameTimeout,
+    }));
 
   MessageBuilder.sendRoomsList(client, roomsInfo);
 }

@@ -1,10 +1,14 @@
 import { test, expect } from '@playwright/test';
 
-test('E2E test game preserves state across reload', async ({ page }) => {
-  await page.goto('/?room=Room2&game=e2eTest', { waitUntil: 'networkidle' });
+const TEST_ROOM_NAME = 'e2e-test-game-room';
 
-  // Wait until we appear to be in Room2
-  await expect(page.getByText('Room: Room2')).toBeVisible();
+test('E2E test game preserves state across reload', async ({ page }) => {
+  await page.goto(`/?room=${TEST_ROOM_NAME}&game=e2eTest`, {
+    waitUntil: 'networkidle',
+  });
+
+  // Wait until we appear to be in the test room
+  await expect(page.getByText(`Room: ${TEST_ROOM_NAME}`)).toBeVisible();
 
   const valueLocator = page.locator('#e2e-test-value');
   const buttonLocator = page.locator('#e2e-test-inc');
@@ -21,7 +25,7 @@ test('E2E test game preserves state across reload', async ({ page }) => {
 
   // Reload the page; the test game should restore from localStorage
   await page.reload({ waitUntil: 'networkidle' });
-  await expect(page.getByText('Room: Room2')).toBeVisible();
+  await expect(page.getByText(`Room: ${TEST_ROOM_NAME}`)).toBeVisible();
   await expect(valueLocator).toBeVisible();
 
   const afterReloadText = await valueLocator.textContent();
