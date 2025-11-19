@@ -50,6 +50,7 @@ function start(): void {
 
   unsubscribe = window.game.subscribeToMessages(handleMessage);
   updateStatus();
+  syncGameStateWithServer();
 }
 
 function initializeState(): void {
