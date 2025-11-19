@@ -294,7 +294,16 @@ const gameParam = urlParams.get('game');
 
 // Try to rejoin the last room on reload/reconnect, or join room from URL
 const persisted = connection.getPersistedState();
-const roomToJoin = roomParam || persisted?.lastRoom;
+const LEGACY_ROOM_NAMES = new Set(['Room1', 'Room2']);
+let persistedRoom = persisted?.lastRoom ?? null;
+
+// Clean up old default room names so they don't keep reappearing forever
+if (persistedRoom && LEGACY_ROOM_NAMES.has(persistedRoom)) {
+  connection.setLastRoom(null);
+  persistedRoom = null;
+}
+
+const roomToJoin = roomParam || persistedRoom;
 if (roomToJoin) {
   scheduleRoomJoin(roomToJoin);
 
