@@ -1,4 +1,5 @@
 import type { Game } from './types.js';
+import { showGameContainer, hideGameContainer } from './game-container.js';
 
 type LaneType = 'goal' | 'water' | 'safe' | 'road' | 'start';
 
@@ -29,7 +30,6 @@ interface FroggerState {
   rows: number;
   tileSize: number;
   lanes: Lane[];
-  host: HTMLDivElement;
   frame: HTMLDivElement;
   canvas: HTMLCanvasElement;
   ctx: CanvasRenderingContext2D;
@@ -52,17 +52,6 @@ let state: FroggerState | null = null;
 
 const styleContent = `
   * { box-sizing: border-box; }
-  .frogger-backdrop {
-    position: fixed;
-    inset: 0;
-    background: rgba(5, 12, 20, 0.9);
-    backdrop-filter: blur(2px);
-    z-index: 9999;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 18px;
-  }
   .frogger-container {
     width: min(920px, 100%);
     background: linear-gradient(#0b1b2c, #0f2d44);
@@ -202,15 +191,12 @@ function start(): void {
   styleEl.textContent = styleContent;
   document.head.appendChild(styleEl);
 
-  const backdrop = document.createElement('div');
-  backdrop.className = 'frogger-backdrop';
+  const content = showGameContainer('Frogger', stop);
 
   const frame = document.createElement('div');
   frame.className = 'frogger-container';
   frame.innerHTML = `
     <div class="frogger-hud">
-      <button class="frogger-button" data-frogger-exit>Return to chat</button>
-      <div class="frogger-title">Frogger</div>
       <div class="frogger-stats">
         <span id="frogger-score">Score: 0</span>
         <span id="frogger-level">Level: 1</span>
@@ -245,9 +231,8 @@ function start(): void {
     </div>
   `;
 
-  backdrop.appendChild(frame);
-  backdrop.appendChild(statusOverlay);
-  document.body.appendChild(backdrop);
+  content.appendChild(frame);
+  content.appendChild(statusOverlay);
 
   const canvas = frame.querySelector<HTMLCanvasElement>('#frogger-canvas');
   const scoreEl = frame.querySelector<HTMLElement>('#frogger-score');
@@ -315,7 +300,6 @@ function start(): void {
     rows,
     tileSize,
     lanes,
-    host: backdrop,
     frame,
     canvas,
     ctx,
@@ -362,14 +346,14 @@ function start(): void {
 function stop(): void {
   if (!state) return;
 
-  const { host, styleEl, animationId, unsubscribe, resizeHandler } = state;
+  const { styleEl, animationId, unsubscribe, resizeHandler } = state;
   state.running = false;
   if (animationId) cancelAnimationFrame(animationId);
   if (unsubscribe) unsubscribe();
   window.removeEventListener('keydown', handleInput);
   window.removeEventListener('resize', resizeHandler);
-  if (host.parentElement) host.remove();
   if (styleEl.parentElement) styleEl.remove();
+  hideGameContainer();
   state = null;
 }
 

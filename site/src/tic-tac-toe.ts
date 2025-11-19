@@ -1,7 +1,7 @@
 import type { Game, TicTacToeState, TicTacToeAction } from './types.js';
 import { registerGame } from './game-registry.js';
+import { showGameContainer, hideGameContainer } from './game-container.js';
 
-let originalContent: string;
 let currentState: TicTacToeState | null = null;
 let unsubscribeFromGameState: (() => void) | null = null;
 
@@ -13,12 +13,6 @@ function startGame(): void {
   if (!canPlay()) {
     alert('You need exactly 2 players to play Tic-Tac-Toe!');
     return;
-  }
-
-  // Store original DOM content
-  const mainDiv = document.getElementById('main');
-  if (mainDiv) {
-    originalContent = mainDiv.innerHTML;
   }
 
   // Set up game UI
@@ -69,18 +63,34 @@ function handleGameStateUpdate(data: unknown): void {
 }
 
 function renderGameUI(): void {
-  const mainDiv = document.getElementById('main');
-  if (!mainDiv) return;
+  const content = showGameContainer('Tic-Tac-Toe', stopGame);
 
-  mainDiv.innerHTML = `
-    <div id="tic-tac-toe-game">
-      <h2>Tic-Tac-Toe (Server-Authoritative)</h2>
-      <div id="game-status"></div>
-      <div id="turn-indicator"></div>
-      <div id="error-message" style="color: red; font-weight: bold;"></div>
-      <div id="game-board"></div>
-    </div>
-  `;
+  const gameContainer = document.createElement('div');
+  gameContainer.id = 'tic-tac-toe-game';
+  gameContainer.style.padding = '2rem';
+  gameContainer.style.color = '#f8fafc';
+
+  const status = document.createElement('div');
+  status.id = 'game-status';
+  gameContainer.appendChild(status);
+
+  const turnIndicator = document.createElement('div');
+  turnIndicator.id = 'turn-indicator';
+  turnIndicator.style.margin = '1rem 0';
+  gameContainer.appendChild(turnIndicator);
+
+  const errorMessage = document.createElement('div');
+  errorMessage.id = 'error-message';
+  errorMessage.style.color = '#ef4444';
+  errorMessage.style.fontWeight = 'bold';
+  errorMessage.style.margin = '0.5rem 0';
+  gameContainer.appendChild(errorMessage);
+
+  const board = document.createElement('div');
+  board.id = 'game-board';
+  gameContainer.appendChild(board);
+
+  content.appendChild(gameContainer);
 
   renderBoard();
   updateStatus();
@@ -229,18 +239,13 @@ function scheduleRestart(): void {
 }
 
 function stopGame(): void {
-  // Restore original DOM
-  const mainDiv = document.getElementById('main');
-  if (mainDiv && originalContent) {
-    mainDiv.innerHTML = originalContent;
-  }
-
   // Clear handler
   if (unsubscribeFromGameState) {
     unsubscribeFromGameState();
     unsubscribeFromGameState = null;
   }
 
+  hideGameContainer();
   console.log('Tic-Tac-Toe stopped!');
 }
 

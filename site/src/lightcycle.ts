@@ -1,6 +1,7 @@
-import { getPlayerIds } from "./player-utils.js";
+import { getPlayerIds } from './player-utils.js';
 import type { Game, MessageCallback } from './types.js';
 import { registerGame } from './game-registry.js';
+import { showGameContainer, hideGameContainer } from './game-container.js';
 
 interface TrailPoint {
   x: number;
@@ -26,10 +27,8 @@ interface LightcycleState {
   players: Map<string, PlayerRuntimeState>;
   localPlayerId: string | null;
   running: boolean;
-  overlay: HTMLDivElement | null;
   canvas: HTMLCanvasElement | null;
   ctx: CanvasRenderingContext2D | null;
-  styleEl: HTMLStyleElement | null;
   statusEl: HTMLDivElement | null;
   hudEl: HTMLDivElement | null;
   touchButtons: NodeListOf<HTMLButtonElement> | null;
@@ -75,18 +74,19 @@ function start(): void {
     return;
   }
 
-  installStyles();
+  const content = showGameContainer('Lightcycles', stop);
+
+  const styleEl = document.createElement('style');
+  styleEl.textContent = installStyles();
+  document.head.appendChild(styleEl);
 
   const overlay = document.createElement('div');
-  overlay.className = 'lightcycle-backdrop';
   overlay.innerHTML = `
     <div class="lightcycle-frame">
       <div class="lightcycle-header">
         <div>
-          <div class="lightcycle-title">Lightcycles</div>
           <div class="lightcycle-subtitle">Turn to survive. Hitting any trail is instant death.</div>
         </div>
-        <button class="lightcycle-button" data-lightcycle-exit>Return to chat</button>
       </div>
       <div class="lightcycle-canvas-wrap">
         <canvas id="lightcycle-canvas"></canvas>
@@ -104,7 +104,7 @@ function start(): void {
     </div>
   `;
 
-  document.body.appendChild(overlay);
+  content.appendChild(overlay);
 
   const canvas = overlay.querySelector<HTMLCanvasElement>('#lightcycle-canvas');
   const hudEl = overlay.querySelector<HTMLDivElement>('#lightcycle-hud');
@@ -157,10 +157,8 @@ function start(): void {
     players,
     localPlayerId,
     running: true,
-    overlay,
     canvas,
     ctx,
-    styleEl: currentStyleEl,
     statusEl,
     hudEl,
     touchButtons,
@@ -172,13 +170,6 @@ function start(): void {
     unsubscribeMessages,
     previousOnMessage,
   };
-
-  const exitButtons = overlay.querySelectorAll<HTMLButtonElement>(
-    '[data-lightcycle-exit]',
-  );
-  exitButtons.forEach((btn) => {
-    btn.addEventListener('click', () => stop());
-  });
 
   pendingDirection = null;
   resizeHandler();
@@ -218,14 +209,6 @@ function stop(): void {
     window.removeEventListener('keyup', state.keyUpHandler);
   }
 
-  if (state.overlay && state.overlay.parentElement) {
-    state.overlay.parentElement.removeChild(state.overlay);
-  }
-
-  if (state.styleEl && state.styleEl.parentElement) {
-    state.styleEl.parentElement.removeChild(state.styleEl);
-  }
-
   if (state.unsubscribeMessages) {
     state.unsubscribeMessages();
   }
@@ -237,8 +220,9 @@ function stop(): void {
   }
 
   state = null;
-  currentStyleEl = null;
   pendingDirection = null;
+
+  hideGameContainer();
 }
 
 function setupPlayers(
@@ -320,22 +304,8 @@ function getStartConfig(
   return configs[index % configs.length];
 }
 
-let currentStyleEl: HTMLStyleElement | null = null;
-
-function installStyles(): void {
-  if (currentStyleEl) return;
-
-  const css = `
-  .lightcycle-backdrop {
-    position: fixed;
-    inset: 0;
-    background: radial-gradient(circle at top, #020617 0, #000000 60%);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 12px;
-    z-index: 9999;
-  }
+function installStyles(): string {
+  return `
   .lightcycle-frame {
     background: radial-gradient(circle at top, #020617 0, #020617 60%);
     border-radius: 18px;
@@ -458,10 +428,6 @@ function installStyles(): void {
     }
   }
   `;
-
-  currentStyleEl = document.createElement('style');
-  currentStyleEl.textContent = css;
-  document.head.appendChild(currentStyleEl);
 }
 
 function handleResize(

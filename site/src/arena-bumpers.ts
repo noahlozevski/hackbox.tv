@@ -1,6 +1,7 @@
 import type { Game, PlayerInfo } from './types.js';
 import { getPlayerIds } from './player-utils.js';
 import { defaultHandlePlayersChanged } from './client.js';
+import { showGameContainer, hideGameContainer } from './game-container.js';
 
 interface NetPlayerState {
   x: number;
@@ -26,10 +27,8 @@ interface InputState {
   dashQueued: boolean;
 }
 
-let backdropEl: HTMLDivElement | null = null;
 let canvasEl: HTMLCanvasElement | null = null;
 let ctx: CanvasRenderingContext2D | null = null;
-let styleEl: HTMLStyleElement | null = null;
 
 let animationFrameId: number | null = null;
 let lastTimestamp: number | null = null;
@@ -72,17 +71,12 @@ function start(): void {
     return;
   }
 
-  if (backdropEl) {
-    stop();
-  }
-
   localPlayerId = window.game.state.playerId;
   if (!localPlayerId) {
     alert('Join a room before starting Arena Bumpers.');
     return;
   }
 
-  installStyles();
   createUI();
   setupPlayers();
   attachInputHandlers();
@@ -106,35 +100,18 @@ function stop(): void {
   detachInputHandlers();
   teardownNetworking();
 
-  if (backdropEl && backdropEl.parentNode) {
-    backdropEl.parentNode.removeChild(backdropEl);
-  }
-  backdropEl = null;
   canvasEl = null;
   ctx = null;
-
-  if (styleEl && styleEl.parentNode) {
-    styleEl.parentNode.removeChild(styleEl);
-  }
-  styleEl = null;
 
   players = new Map();
   localPlayerId = null;
   lastTimestamp = null;
+
+  hideGameContainer();
 }
 
-function installStyles(): void {
-  const css = `
-  .arena-bumpers-backdrop {
-    position: fixed;
-    inset: 0;
-    background: rgba(15, 23, 42, 0.92);
-    z-index: 1000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 12px;
-  }
+function installStyles(): string {
+  return `
   .arena-bumpers-frame {
     background: radial-gradient(circle at top, #111827 0, #020617 55%);
     border-radius: 18px;
@@ -256,25 +233,22 @@ function installStyles(): void {
     }
   }
   `;
-
-  styleEl = document.createElement('style');
-  styleEl.textContent = css;
-  document.head.appendChild(styleEl);
 }
 
 function createUI(): void {
-  const backdrop = document.createElement('div');
-  backdrop.className = 'arena-bumpers-backdrop';
+  const content = showGameContainer('Arena Bumpers', stop);
+
+  const styleEl = document.createElement('style');
+  styleEl.textContent = installStyles();
+  document.head.appendChild(styleEl);
 
   const frame = document.createElement('div');
   frame.className = 'arena-bumpers-frame';
   frame.innerHTML = `
     <div class="arena-bumpers-header">
       <div>
-        <div class="arena-bumpers-title">Arena Bumpers</div>
         <div class="arena-bumpers-subtitle">Rotate, dash, and knock rivals off the ring.</div>
       </div>
-      <button class="arena-bumpers-button" data-arena-exit>Return to chat</button>
     </div>
     <div class="arena-bumpers-canvas-wrap">
       <canvas id="arena-bumpers-canvas"></canvas>
@@ -291,10 +265,7 @@ function createUI(): void {
     </div>
   `;
 
-  backdrop.appendChild(frame);
-  document.body.appendChild(backdrop);
-
-  backdropEl = backdrop;
+  content.appendChild(frame);
 
   const canvas = frame.querySelector<HTMLCanvasElement>(
     '#arena-bumpers-canvas',
@@ -306,14 +277,6 @@ function createUI(): void {
       ctx = ctx2d;
     }
   }
-
-  const exitButtons =
-    frame.querySelectorAll<HTMLButtonElement>('[data-arena-exit]');
-  exitButtons.forEach((btn) => {
-    btn.addEventListener('click', () => {
-      stop();
-    });
-  });
 
   const controlButtons = frame.querySelectorAll<HTMLButtonElement>(
     '.arena-bumpers-control-btn',

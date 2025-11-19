@@ -1,5 +1,6 @@
 import type { Game } from './types.js';
 import { registerGame } from './game-registry.js';
+import { showGameContainer, hideGameContainer } from './game-container.js';
 
 const STORAGE_KEY = 'e2e-test-counter';
 const CONTAINER_ID = 'e2e-test-game';
@@ -17,34 +18,33 @@ function writeCounter(value: number): void {
 }
 
 function render(): void {
+  const content = showGameContainer('E2E Test Game', cleanup);
+
   let container = document.getElementById(CONTAINER_ID);
   if (!container) {
-    const chat = document.getElementById('chat') ?? document.body;
     container = document.createElement('div');
     container.id = CONTAINER_ID;
-    container.style.marginTop = '1rem';
-    container.style.padding = '0.75rem';
-    container.style.borderRadius = '6px';
-    container.style.border = '1px dashed #cbd5e0';
-    container.style.backgroundColor = '#f7fafc';
-
-    const title = document.createElement('div');
-    title.textContent = 'E2E Test Game';
-    title.style.fontWeight = 'bold';
-    title.style.marginBottom = '0.5rem';
-    container.appendChild(title);
+    container.style.padding = '2rem';
+    container.style.color = '#f8fafc';
+    container.style.textAlign = 'center';
 
     const valueEl = document.createElement('div');
     valueEl.id = VALUE_ID;
     valueEl.style.fontFamily = 'monospace';
-    valueEl.style.marginBottom = '0.5rem';
+    valueEl.style.fontSize = '2rem';
+    valueEl.style.marginBottom = '1rem';
     container.appendChild(valueEl);
 
     const button = document.createElement('button');
     button.id = BUTTON_ID;
     button.textContent = 'Increment counter';
-    button.style.padding = '0.4rem 0.8rem';
-    button.style.fontSize = '0.9rem';
+    button.style.padding = '0.75rem 1.5rem';
+    button.style.fontSize = '1rem';
+    button.style.background = '#3b82f6';
+    button.style.color = 'white';
+    button.style.border = 'none';
+    button.style.borderRadius = '6px';
+    button.style.cursor = 'pointer';
     button.addEventListener('click', () => {
       const current = readCounter();
       const next = current + 1;
@@ -56,7 +56,7 @@ function render(): void {
     });
     container.appendChild(button);
 
-    chat.appendChild(container);
+    content.appendChild(container);
   }
 
   const value = readCounter();
@@ -67,9 +67,18 @@ function render(): void {
 }
 
 function cleanup(): void {
-  const container = document.getElementById(CONTAINER_ID);
-  if (container && container.parentNode) {
-    container.parentNode.removeChild(container);
+  hideGameContainer();
+}
+
+function saveState(): unknown {
+  return { counter: readCounter() };
+}
+
+function loadState(state: unknown): void {
+  const data = state as { counter?: number };
+  if (typeof data.counter === 'number') {
+    writeCounter(data.counter);
+    render();
   }
 }
 
@@ -77,6 +86,8 @@ const e2eTestGame: Game = {
   canPlay: () => true,
   start: render,
   stop: cleanup,
+  saveState,
+  loadState,
 };
 
 // This game is intentionally not exposed in the UI; it is only

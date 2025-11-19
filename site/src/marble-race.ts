@@ -1,6 +1,7 @@
 import type { Game, PlayerInfo } from './types.js';
 import { getPlayerIds } from './player-utils.js';
 import { defaultHandlePlayersChanged } from './client.js';
+import { showGameContainer, hideGameContainer } from './game-container.js';
 
 interface NetMarbleState {
   x: number;
@@ -42,10 +43,8 @@ const FRICTION = 0.92;
 
 const STATE_EVENT = 'marble-race-state';
 
-let backdropEl: HTMLDivElement | null = null;
 let canvasEl: HTMLCanvasElement | null = null;
 let ctx: CanvasRenderingContext2D | null = null;
-let styleEl: HTMLStyleElement | null = null;
 
 let animationId: number | null = null;
 let lastTime: number | null = null;
@@ -95,17 +94,12 @@ function start(): void {
     return;
   }
 
-  if (backdropEl) {
-    stop();
-  }
-
   localId = window.game.state.playerId;
   if (!localId) {
     alert('Join a room before starting Marble Race.');
     return;
   }
 
-  installStyles();
   createUI();
   setupMarbles();
   setupInput();
@@ -124,34 +118,17 @@ function stop(): void {
   teardownInput();
   teardownNetworking();
 
-  if (backdropEl && backdropEl.parentNode) {
-    backdropEl.parentNode.removeChild(backdropEl);
-  }
-  backdropEl = null;
   canvasEl = null;
   ctx = null;
 
-  if (styleEl && styleEl.parentNode) {
-    styleEl.parentNode.removeChild(styleEl);
-  }
-  styleEl = null;
-
   marbles = new Map();
   localId = null;
+
+  hideGameContainer();
 }
 
-function installStyles(): void {
-  const css = `
-    .marble-race-backdrop {
-      position: fixed;
-      inset: 0;
-      background: radial-gradient(circle at top, rgba(15,23,42,0.98), rgba(15,23,42,0.96));
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 9999;
-      padding: 14px;
-    }
+function installStyles(): string {
+  return `
     .marble-race-frame {
       width: min(920px, 100%);
       background: linear-gradient(145deg, #020617, #020617);
@@ -328,25 +305,22 @@ function installStyles(): void {
       }
     }
   `;
-
-  styleEl = document.createElement('style');
-  styleEl.textContent = css;
-  document.head.appendChild(styleEl);
 }
 
 function createUI(): void {
-  const backdrop = document.createElement('div');
-  backdrop.className = 'marble-race-backdrop';
+  const content = showGameContainer('Marble Race', stop);
+
+  const styleEl = document.createElement('style');
+  styleEl.textContent = installStyles();
+  document.head.appendChild(styleEl);
 
   const frame = document.createElement('div');
   frame.className = 'marble-race-frame';
   frame.innerHTML = `
     <div class="marble-race-header">
       <div>
-        <div class="marble-race-title">Marble Race</div>
         <div class="marble-race-subtitle">Tilt your phone to roll through the maze. First to the top wins.</div>
       </div>
-      <button class="marble-race-button" data-marble-exit>Return to chat</button>
     </div>
     <div class="marble-race-main">
       <div class="marble-race-canvas-wrap">
@@ -378,9 +352,7 @@ function createUI(): void {
     </div>
   `;
 
-  backdrop.appendChild(frame);
-  document.body.appendChild(backdrop);
-  backdropEl = backdrop;
+  content.appendChild(frame);
 
   const canvas = frame.querySelector<HTMLCanvasElement>('#marble-race-canvas');
   canvasEl = canvas ?? null;
@@ -390,14 +362,6 @@ function createUI(): void {
       ctx = context;
     }
   }
-
-  const exitButtons =
-    frame.querySelectorAll<HTMLButtonElement>('[data-marble-exit]');
-  exitButtons.forEach((btn) => {
-    btn.addEventListener('click', () => {
-      stop();
-    });
-  });
 
   handleResize();
   resizeHandler = handleResize;

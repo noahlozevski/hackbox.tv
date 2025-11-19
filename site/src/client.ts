@@ -261,9 +261,10 @@ function handleServerMessage(message: ServerMessage): void {
           );
         }
         // Sync with server's active game state
+        // Only sync if server has an ACTIVE game (not just saved state)
         if (room && room.activeGame !== game.currentGame) {
           if (room.activeGame && !game.currentGame) {
-            // Server says a game is active, but we don't have one - start it with saved state
+            // Server says a game is currently active, but we don't have one - start it with saved state
             try {
               window.startGame(room.activeGame, false, room.gameState);
             } catch (error) {
@@ -291,6 +292,8 @@ function handleServerMessage(message: ServerMessage): void {
             }
           }
         }
+        // Note: If activeGame is null but gameState exists, that means the game was
+        // stopped and state is saved for potential resume. We DON'T auto-start it.
       }
       break;
     case 'joinedRoom': {

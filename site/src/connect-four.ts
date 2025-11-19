@@ -4,6 +4,7 @@ import {
   getPlayerIndex,
   getNextPlayerId,
 } from './player-utils.js';
+import { showGameContainer, hideGameContainer } from './game-container.js';
 
 type Cell = string | null;
 
@@ -16,11 +17,19 @@ interface ConnectFourState {
   isResetting: boolean;
 }
 
+interface SerializedConnectFourState {
+  version: 1;
+  board: (0 | 1 | null)[][];
+  currentTurnIndex: 0 | 1 | null;
+  winnerIndex: 0 | 1 | null;
+  gameOver: boolean;
+  isResetting: boolean;
+}
+
 const ROWS = 6;
 const COLS = 7;
 
 let state: ConnectFourState | null = null;
-let overlay: HTMLDivElement | null = null;
 let boardContainer: HTMLDivElement | null = null;
 let statusLine: HTMLParagraphElement | null = null;
 let unsubscribe: (() => void) | null = null;
@@ -57,57 +66,98 @@ function initializeState(): void {
 }
 
 function renderUI(): void {
-  cleanupOverlay();
-
-  overlay = document.createElement('div');
-  overlay.id = 'connect-four-overlay';
-  overlay.style.position = 'fixed';
-  overlay.style.inset = '0';
-  overlay.style.backgroundColor = 'rgba(0,0,0,0.6)';
-  overlay.style.display = 'flex';
-  overlay.style.alignItems = 'center';
-  overlay.style.justifyContent = 'center';
-  overlay.style.padding = '16px';
-  overlay.style.zIndex = '9999';
+  const content = showGameContainer('Connect Four', stop);
 
   const card = document.createElement('div');
-  card.style.backgroundColor = '#111827';
+  card.style.background =
+    'radial-gradient(circle at top, #0f172a 0, #020617 65%)';
   card.style.color = '#e5e7eb';
-  card.style.borderRadius = '12px';
-  card.style.boxShadow = '0 10px 50px rgba(0,0,0,0.5)';
-  card.style.padding = '18px';
+  card.style.borderRadius = '14px';
+  card.style.boxShadow =
+    '0 18px 45px rgba(15,23,42,0.85), 0 0 0 1px rgba(148,163,184,0.25)';
+  card.style.padding = '14px 16px 16px';
   card.style.width = 'min(520px, 96vw)';
   card.style.maxHeight = '90vh';
   card.style.overflow = 'auto';
   card.style.boxSizing = 'border-box';
-  card.style.fontFamily = 'Arial, sans-serif';
+  card.style.fontFamily =
+    '-apple-system, BlinkMacSystemFont, system-ui, -system-ui, sans-serif';
 
-  const header = document.createElement('div');
-  header.style.display = 'flex';
-  header.style.justifyContent = 'space-between';
-  header.style.alignItems = 'center';
+  const headerRow = document.createElement('div');
+  headerRow.style.display = 'flex';
+  headerRow.style.justifyContent = 'space-between';
+  headerRow.style.alignItems = 'baseline';
+  headerRow.style.marginBottom = '6px';
 
-  const title = document.createElement('h2');
+  const title = document.createElement('h3');
   title.textContent = 'Connect Four';
   title.style.margin = '0';
+  title.style.fontSize = '17px';
+  title.style.letterSpacing = '0.04em';
+  title.style.textTransform = 'uppercase';
+  title.style.color = '#e5e7eb';
 
-  const close = document.createElement('button');
-  close.textContent = 'Close';
-  close.style.backgroundColor = '#ef4444';
-  close.style.border = 'none';
-  close.style.color = '#fff';
-  close.style.padding = '8px 12px';
-  close.style.borderRadius = '6px';
-  close.style.cursor = 'pointer';
-  close.addEventListener('click', stop);
+  const meta = document.createElement('span');
+  meta.textContent = '2 players · quick match';
+  meta.style.fontSize = '12px';
+  meta.style.color = '#9ca3af';
 
-  header.appendChild(title);
-  header.appendChild(close);
-  card.appendChild(header);
+  headerRow.appendChild(title);
+  headerRow.appendChild(meta);
+  card.appendChild(headerRow);
+
+  const subtitle = document.createElement('p');
+  subtitle.style.margin = '0 0 10px';
+  subtitle.style.fontSize = '13px';
+  subtitle.style.color = '#9ca3af';
+
+  const ourIndex = getPlayerIndex(window.game.players, state?.playerId ?? null);
+  const ourColor = ourIndex === 0 ? 'Red' : ourIndex === 1 ? 'Yellow' : null;
+
+  subtitle.textContent = ourColor
+    ? `First to connect four wins. You are ${ourColor}.`
+    : 'First to connect four wins.';
+  card.appendChild(subtitle);
+
+  if (window.game.players.length >= 2) {
+    const playersRow = document.createElement('div');
+    playersRow.style.display = 'flex';
+    playersRow.style.gap = '12px';
+    playersRow.style.margin = '8px 0 10px';
+    playersRow.style.fontSize = '13px';
+
+    window.game.players.slice(0, 2).forEach((player, index) => {
+      const chip = document.createElement('div');
+      chip.style.display = 'flex';
+      chip.style.alignItems = 'center';
+      chip.style.gap = '6px';
+
+      const dot = document.createElement('span');
+      dot.style.display = 'inline-block';
+      dot.style.width = '10px';
+      dot.style.height = '10px';
+      dot.style.borderRadius = '999px';
+      dot.style.boxShadow = '0 0 0 1px rgba(15,23,42,0.9)';
+      dot.style.backgroundColor = index === 0 ? '#f87171' : '#fbbf24';
+
+      const label = document.createElement('span');
+      const isUs = player.id === state?.playerId;
+      label.textContent = `${index === 0 ? 'Red' : 'Yellow'} · ${
+        player.name || 'Player'
+      }${isUs ? ' (you)' : ''}`;
+
+      chip.appendChild(dot);
+      chip.appendChild(label);
+      playersRow.appendChild(chip);
+    });
+
+    card.appendChild(playersRow);
+  }
 
   statusLine = document.createElement('p');
-  statusLine.style.margin = '12px 0';
-  statusLine.style.fontSize = '16px';
+  statusLine.style.margin = '0 0 12px';
+  statusLine.style.fontSize = '14px';
+  statusLine.style.fontWeight = '500';
   card.appendChild(statusLine);
 
   boardContainer = document.createElement('div');
@@ -117,14 +167,14 @@ function renderUI(): void {
   boardContainer.style.backgroundColor = '#1f2937';
   boardContainer.style.padding = '10px';
   boardContainer.style.borderRadius = '10px';
-  boardContainer.style.boxShadow = 'inset 0 0 0 1px rgba(255,255,255,0.05)';
+  boardContainer.style.boxShadow =
+    '0 10px 30px rgba(15,23,42,0.85), inset 0 0 0 1px rgba(148,163,184,0.25)';
   boardContainer.style.touchAction = 'manipulation';
   card.appendChild(boardContainer);
 
   renderBoard();
 
-  overlay.appendChild(card);
-  document.body.appendChild(overlay);
+  content.appendChild(card);
 }
 
 function renderBoard(): void {
@@ -138,6 +188,7 @@ function renderBoard(): void {
       cell.style.aspectRatio = '1 / 1';
       cell.style.borderRadius = '50%';
       cell.style.backgroundColor = '#374151';
+      cell.style.boxShadow = '0 0 0 1px rgba(15,23,42,0.9)';
       cell.style.display = 'flex';
       cell.style.alignItems = 'center';
       cell.style.justifyContent = 'center';
@@ -145,6 +196,19 @@ function renderBoard(): void {
       cell.style.touchAction = 'manipulation';
       cell.dataset.col = String(col);
       cell.addEventListener('click', () => handleColumnClick(col));
+
+      cell.addEventListener('mouseenter', () => {
+        if (cell.style.cursor === 'pointer') {
+          cell.style.transform = 'translateY(-2px)';
+          cell.style.boxShadow =
+            '0 0 0 1px rgba(15,23,42,0.9), 0 8px 14px rgba(15,23,42,0.7)';
+        }
+      });
+
+      cell.addEventListener('mouseleave', () => {
+        cell.style.transform = 'translateY(0)';
+        cell.style.boxShadow = '0 0 0 1px rgba(15,23,42,0.9)';
+      });
 
       const value = state.board[row][col];
       if (value) {
@@ -203,6 +267,7 @@ function makeMove(playerId: string, col: number, row: number): void {
     state.winner = playerId;
     state.gameOver = true;
     updateStatus();
+    syncGameStateWithServer();
     scheduleRestart();
     return;
   }
@@ -210,13 +275,18 @@ function makeMove(playerId: string, col: number, row: number): void {
   if (isBoardFull()) {
     state.gameOver = true;
     updateStatus();
+    syncGameStateWithServer();
     scheduleRestart();
     return;
   }
 
-  const nextPlayer = getNextPlayerId(window.game.players, state.currentTurn || state.playerId);
+  const nextPlayer = getNextPlayerId(
+    window.game.players,
+    state.currentTurn || state.playerId,
+  );
   state.currentTurn = nextPlayer;
   updateStatus();
+  syncGameStateWithServer();
 }
 
 function checkWin(row: number, col: number, playerId: string): boolean {
@@ -289,6 +359,7 @@ function resetBoard(): void {
 
   renderBoard();
   updateStatus();
+  syncGameStateWithServer();
 }
 
 function updateStatus(): void {
@@ -331,16 +402,93 @@ function stop(): void {
 }
 
 function cleanupOverlay(): void {
-  if (overlay) {
-    overlay.remove();
-    overlay = null;
+  hideGameContainer();
+  boardContainer = null;
+  statusLine = null;
+}
+
+function serializeState(): SerializedConnectFourState | null {
+  if (!state) return null;
+
+  const players = window.game.players;
+  if (players.length < 2) return null;
+
+  const board = state.board.map((row) =>
+    row.map((cell) => {
+      if (!cell) return null;
+      const index = getPlayerIndex(players, cell);
+      return index === 0 || index === 1 ? (index as 0 | 1) : null;
+    }),
+  );
+
+  const currentIndex = getPlayerIndex(players, state.currentTurn);
+  const winnerIndex = getPlayerIndex(players, state.winner);
+
+  return {
+    version: 1,
+    board,
+    currentTurnIndex:
+      currentIndex === 0 || currentIndex === 1 ? (currentIndex as 0 | 1) : null,
+    winnerIndex:
+      winnerIndex === 0 || winnerIndex === 1 ? (winnerIndex as 0 | 1) : null,
+    gameOver: state.gameOver,
+    isResetting: state.isResetting,
+  };
+}
+
+function applySerializedState(savedState: unknown): void {
+  if (!state || !savedState) return;
+
+  const data = savedState as SerializedConnectFourState;
+  if (data.version !== 1 || !Array.isArray(data.board)) return;
+
+  const players = window.game.players;
+  if (players.length < 2) return;
+
+  state.board = data.board.map((row) =>
+    row.map((cellIndex) => {
+      if (cellIndex === 0 || cellIndex === 1) {
+        return players[cellIndex]?.id ?? null;
+      }
+      return null;
+    }),
+  );
+
+  if (data.currentTurnIndex === 0 || data.currentTurnIndex === 1) {
+    state.currentTurn = players[data.currentTurnIndex]?.id ?? null;
+  } else {
+    state.currentTurn = getFirstPlayerId(players) || state.playerId;
   }
+
+  if (data.winnerIndex === 0 || data.winnerIndex === 1) {
+    state.winner = players[data.winnerIndex]?.id ?? null;
+  } else {
+    state.winner = null;
+  }
+
+  state.gameOver = data.gameOver;
+  state.isResetting = data.isResetting;
+
+  renderBoard();
+  updateStatus();
+}
+
+function syncGameStateWithServer(): void {
+  const serialized = serializeState();
+  if (!serialized) return;
+
+  window.game.sendMessage('saveGameState', {
+    gameId: 'connectFour',
+    state: serialized,
+  });
 }
 
 const connectFourGame: Game = {
   canPlay,
   start,
   stop,
+  saveState: () => serializeState(),
+  loadState: applySerializedState,
 };
 
 if (!window.games) {

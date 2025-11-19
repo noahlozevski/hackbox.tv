@@ -1,6 +1,7 @@
 import type { Game } from './types.js';
 import { getPlayerIds } from './player-utils.js';
 import { registerGame } from './game-registry.js';
+import { showGameContainer, hideGameContainer } from './game-container.js';
 
 type Choice = 'rock' | 'paper' | 'scissors';
 
@@ -12,7 +13,6 @@ interface RockPaperScissorsState {
 }
 
 let state: RockPaperScissorsState | null = null;
-let overlay: HTMLDivElement | null = null;
 let statusLine: HTMLParagraphElement | null = null;
 let scoreLine: HTMLDivElement | null = null;
 let choiceSummary: Record<string, HTMLDivElement> = {};
@@ -58,7 +58,11 @@ function initializeState(): void {
   };
 }
 
-function handleIncomingMessage(playerId: string, event: string, payload: unknown): void {
+function handleIncomingMessage(
+  playerId: string,
+  event: string,
+  payload: unknown,
+): void {
   if (event !== 'rps-choice') return;
 
   const data = payload as { choice: Choice };
@@ -66,20 +70,7 @@ function handleIncomingMessage(playerId: string, event: string, payload: unknown
 }
 
 function renderUI(): void {
-  if (overlay) {
-    overlay.remove();
-  }
-
-  overlay = document.createElement('div');
-  overlay.id = 'rps-overlay';
-  overlay.style.position = 'fixed';
-  overlay.style.inset = '0';
-  overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.65)';
-  overlay.style.display = 'flex';
-  overlay.style.justifyContent = 'center';
-  overlay.style.alignItems = 'center';
-  overlay.style.zIndex = '9999';
-  overlay.style.padding = '16px';
+  const content = showGameContainer('Rock Paper Scissors', stopGame);
 
   const card = document.createElement('div');
   card.style.backgroundColor = '#1a202c';
@@ -90,30 +81,6 @@ function renderUI(): void {
   card.style.boxShadow = '0 10px 40px rgba(0, 0, 0, 0.4)';
   card.style.padding = '20px';
   card.style.fontFamily = 'Arial, sans-serif';
-
-  const header = document.createElement('div');
-  header.style.display = 'flex';
-  header.style.justifyContent = 'space-between';
-  header.style.alignItems = 'center';
-  header.style.marginBottom = '10px';
-
-  const title = document.createElement('h2');
-  title.textContent = 'Rock Paper Scissors';
-  title.style.margin = '0';
-
-  const closeButton = document.createElement('button');
-  closeButton.textContent = 'Close';
-  closeButton.style.backgroundColor = '#e53e3e';
-  closeButton.style.border = 'none';
-  closeButton.style.color = '#fff';
-  closeButton.style.padding = '8px 12px';
-  closeButton.style.borderRadius = '6px';
-  closeButton.style.cursor = 'pointer';
-  closeButton.addEventListener('click', stopGame);
-
-  header.appendChild(title);
-  header.appendChild(closeButton);
-  card.appendChild(header);
 
   statusLine = document.createElement('p');
   statusLine.style.margin = '8px 0 12px';
@@ -182,8 +149,7 @@ function renderUI(): void {
   });
 
   card.appendChild(buttons);
-  overlay.appendChild(card);
-  document.body.appendChild(overlay);
+  content.appendChild(card);
 }
 
 function handleLocalChoice(choice: Choice): void {
@@ -239,7 +205,11 @@ function resolveRound(): void {
 
   if (winner) {
     state.scores[winner] = (state.scores[winner] ?? 0) + 1;
-    updateStatus(winner === state.playerId ? 'You win the round!' : 'Opponent wins the round!');
+    updateStatus(
+      winner === state.playerId
+        ? 'You win the round!'
+        : 'Opponent wins the round!',
+    );
   } else {
     updateStatus('Round tied. Go again!');
   }
@@ -315,11 +285,6 @@ function stopGame(): void {
     resetTimer = null;
   }
 
-  if (overlay) {
-    overlay.remove();
-    overlay = null;
-  }
-
   state = null;
   choiceSummary = {};
 
@@ -327,6 +292,8 @@ function stopGame(): void {
     unsubscribeFromMessages();
     unsubscribeFromMessages = null;
   }
+
+  hideGameContainer();
 }
 
 function getOpponentId(): string {

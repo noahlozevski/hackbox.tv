@@ -6,6 +6,7 @@ import type {
 } from './types.js';
 import { getPlayerIds } from './player-utils.js';
 import { defaultHandlePlayersChanged } from './client.js';
+import { showGameContainer, hideGameContainer } from './game-container.js';
 
 type Edge = 'top' | 'right' | 'bottom' | 'left';
 
@@ -39,10 +40,8 @@ const BASE_BALL_SPEED = 0.55;
 const PADDLE_LENGTH = 0.3;
 const PADDLE_THICKNESS = 0.04;
 
-let backdropEl: HTMLDivElement | null = null;
 let canvasEl: HTMLCanvasElement | null = null;
 let ctx: CanvasRenderingContext2D | null = null;
-let styleEl: HTMLStyleElement | null = null;
 
 let animationId: number | null = null;
 let lastTimestamp: number | null = null;
@@ -88,10 +87,6 @@ function start(): void {
     return;
   }
 
-  if (backdropEl) {
-    stop();
-  }
-
   localPlayerId = window.game.state.playerId;
   if (!localPlayerId) {
     alert('Join a room before starting Tilt Pong.');
@@ -101,7 +96,6 @@ function start(): void {
   const ids = getPlayerIds(window.game.players);
   hostPlayerId = ids[0] ?? null;
 
-  installStyles();
   createUI();
   initializePlayers(ids);
   setupInput();
@@ -122,17 +116,8 @@ function stop(): void {
   teardownInput();
   teardownNetworking();
 
-  if (backdropEl && backdropEl.parentNode) {
-    backdropEl.parentNode.removeChild(backdropEl);
-  }
-  backdropEl = null;
   canvasEl = null;
   ctx = null;
-
-  if (styleEl && styleEl.parentNode) {
-    styleEl.parentNode.removeChild(styleEl);
-  }
-  styleEl = null;
 
   paddles = new Map();
   scores = new Map();
@@ -140,20 +125,12 @@ function stop(): void {
   hostPlayerId = null;
   lastTimestamp = null;
   lastMissId = null;
+
+  hideGameContainer();
 }
 
-function installStyles(): void {
-  const css = `
-    .tilt-pong-backdrop {
-      position: fixed;
-      inset: 0;
-      background: radial-gradient(circle at top, rgba(15,23,42,0.98), rgba(15,23,42,0.96));
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 9999;
-      padding: 14px;
-    }
+function installStyles(): string {
+  return `
     .tilt-pong-frame {
       width: min(920px, 100%);
       background: linear-gradient(145deg, #020617, #020617);
@@ -327,25 +304,22 @@ function installStyles(): void {
       }
     }
   `;
-
-  styleEl = document.createElement('style');
-  styleEl.textContent = css;
-  document.head.appendChild(styleEl);
 }
 
 function createUI(): void {
-  const backdrop = document.createElement('div');
-  backdrop.className = 'tilt-pong-backdrop';
+  const content = showGameContainer('Tilt Pong', stop);
+
+  const styleEl = document.createElement('style');
+  styleEl.textContent = installStyles();
+  document.head.appendChild(styleEl);
 
   const frame = document.createElement('div');
   frame.className = 'tilt-pong-frame';
   frame.innerHTML = `
     <div class="tilt-pong-header">
       <div>
-        <div class="tilt-pong-title">Tilt Pong</div>
         <div class="tilt-pong-subtitle">Tilt to slide your paddle along your wall. Miss the ball and you concede a point.</div>
       </div>
-      <button class="tilt-pong-button" data-tilt-pong-exit>Return to chat</button>
     </div>
     <div class="tilt-pong-main">
       <div class="tilt-pong-canvas-wrap">
@@ -376,9 +350,7 @@ function createUI(): void {
     </div>
   `;
 
-  backdrop.appendChild(frame);
-  document.body.appendChild(backdrop);
-  backdropEl = backdrop;
+  content.appendChild(frame);
 
   const canvas = frame.querySelector<HTMLCanvasElement>('#tilt-pong-canvas');
   canvasEl = canvas ?? null;
@@ -388,15 +360,6 @@ function createUI(): void {
       ctx = context;
     }
   }
-
-  const exitButtons = frame.querySelectorAll<HTMLButtonElement>(
-    '[data-tilt-pong-exit]',
-  );
-  exitButtons.forEach((btn) => {
-    btn.addEventListener('click', () => {
-      stop();
-    });
-  });
 
   handleResize();
   resizeHandler = handleResize;
