@@ -11,6 +11,18 @@ const ROOM_AND_GAME_URL = `${SHARE_ORIGIN}/share/${encodeURIComponent(
   SHARE_ROOM,
 )}/${encodeURIComponent(SHARE_GAME)}`;
 
+// Keep this list in sync with the known game IDs that have OG images
+const GAMES_WITH_OG_IMAGES = [
+  'connectFour',
+  'marbleRace',
+  'tiltPong',
+  'arenaBumpers',
+  'frogger',
+  'ticTacToe',
+  'rockPaperScissors',
+  'lightcycle',
+];
+
 function fetchHtml(url: string): Promise<string> {
   return new Promise((resolve, reject) => {
     https
@@ -98,4 +110,25 @@ describe('Prod Share Page E2E', () => {
     expect(statusCode).toBeLessThan(400);
     expect(contentType && contentType.startsWith('image/')).toBe(true);
   }, 30_000);
+
+  it('serves valid OG images for all known games', async () => {
+    for (const gameId of GAMES_WITH_OG_IMAGES) {
+      const url = `${SHARE_ORIGIN}/share/${encodeURIComponent(
+        SHARE_ROOM,
+      )}/${encodeURIComponent(gameId)}`;
+
+      const html = await fetchHtml(url);
+
+      const ogImageMatch = html.match(
+        /<meta\s+property="og:image"\s+content="([^"]+)"/,
+      );
+      expect(ogImageMatch).not.toBeNull();
+      const ogImageUrl = ogImageMatch?.[1] ?? '';
+      expect(ogImageUrl.startsWith(SHARE_ORIGIN)).toBe(true);
+
+      const { statusCode, contentType } = await fetchAssetHeaders(ogImageUrl);
+      expect(statusCode).toBeLessThan(400);
+      expect(contentType && contentType.startsWith('image/')).toBe(true);
+    }
+  }, 60_000);
 });
