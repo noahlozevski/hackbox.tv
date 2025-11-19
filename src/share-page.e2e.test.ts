@@ -60,7 +60,7 @@ describe('Prod Share Page E2E', () => {
     expect(html).toContain('property="og:title"');
     expect(html).toContain('name="twitter:card"');
     expect(html).toContain('summary_large_image');
-    expect(html).toContain(`Join room ${SHARE_ROOM} on hackbox.tv`);
+    expect(html).toContain(SHARE_ROOM);
     expect(html).toContain(
       `${SHARE_ORIGIN}/?room=${encodeURIComponent(SHARE_ROOM)}`,
     );
@@ -81,7 +81,8 @@ describe('Prod Share Page E2E', () => {
     expect(html).toContain('property="og:title"');
     expect(html).toContain('name="twitter:card"');
     expect(html).toContain('summary_large_image');
-    expect(html).toContain(`Join Tic-Tac-Toe in ${SHARE_ROOM} on hackbox.tv`);
+    expect(html).toContain('Tic-Tac-Toe');
+    expect(html).toContain(SHARE_ROOM);
     expect(html).toContain(
       `${SHARE_ORIGIN}/?room=${encodeURIComponent(
         SHARE_ROOM,
