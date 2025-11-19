@@ -161,7 +161,16 @@ window.startGame = async (
 
   // Load saved state if provided (and game supports it)
   if (savedState && gameEntry.loadState) {
-    gameEntry.loadState(savedState);
+    try {
+      gameEntry.loadState(savedState);
+      try {
+        gameEntry._lastSyncedState = JSON.stringify(savedState);
+      } catch {
+        gameEntry._lastSyncedState = undefined;
+      }
+    } catch (error) {
+      console.error('Error loading saved game state:', error);
+    }
   }
 
   // Update QR code to include the game parameter
@@ -180,6 +189,11 @@ window.startGame = async (
             gameId,
             state: initialState,
           });
+          try {
+            gameEntry._lastSyncedState = JSON.stringify(initialState);
+          } catch {
+            gameEntry._lastSyncedState = undefined;
+          }
         }
       } catch (error) {
         console.error('Error saving initial game state:', error);
@@ -344,6 +358,39 @@ function handleServerMessage(message: ServerMessage): void {
         }
         // Note: If activeGame is null but gameState exists, that means the game was
         // stopped and state is saved for potential resume. We DON'T auto-start it.
+
+        // If we are already running the active game, keep our local state in sync
+        if (
+          room &&
+          room.activeGame &&
+          room.activeGame === game.currentGame &&
+          room.gameState
+        ) {
+          const gameEntry = window.games?.[room.activeGame];
+          if (gameEntry?.loadState) {
+            let incomingStateKey: string | null = null;
+            try {
+              incomingStateKey = JSON.stringify(room.gameState);
+            } catch {
+              incomingStateKey = null;
+            }
+            if (
+              incomingStateKey &&
+              gameEntry._lastSyncedState === incomingStateKey
+            ) {
+              // Already applied this payload
+            } else {
+              try {
+                gameEntry.loadState(room.gameState);
+                if (incomingStateKey) {
+                  gameEntry._lastSyncedState = incomingStateKey;
+                }
+              } catch (error) {
+                console.error('Error syncing in-progress game state:', error);
+              }
+            }
+          }
+        }
       }
       break;
     case 'joinedRoom': {

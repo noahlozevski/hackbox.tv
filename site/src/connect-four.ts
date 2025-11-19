@@ -585,6 +585,19 @@ function syncGameStateWithServer(): void {
     gameId: 'connectFour',
     state: serialized,
   });
+
+  try {
+    const payloadKey = JSON.stringify(serialized);
+    const entry = window.games?.connectFour;
+    if (entry) {
+      entry._lastSyncedState = payloadKey;
+    }
+  } catch {
+    const entry = window.games?.connectFour;
+    if (entry) {
+      entry._lastSyncedState = undefined;
+    }
+  }
 }
 
 const connectFourGame: Game = {

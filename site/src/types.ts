@@ -79,6 +79,11 @@ export interface Game {
    * Original stop method before wrapping (used internally for sync)
    */
   _originalStop?: () => void;
+
+  /**
+   * Internal marker used to avoid reapplying identical saved state payloads
+   */
+  _lastSyncedState?: string;
 }
 
 // Game registry
