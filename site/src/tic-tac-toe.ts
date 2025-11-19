@@ -1,16 +1,7 @@
-import type { Game } from './types.js';
+import type { Game, TicTacToeState, TicTacToeAction } from './types.js';
 
-interface TicTacToeState {
-  playerId: string | null;
-  board: (string | null)[][];
-  currentTurn: string;
-  winner: string | null;
-  gameOver: boolean;
-  isResetting: boolean;
-}
-
-let state: TicTacToeState;
 let originalContent: string;
+let currentState: TicTacToeState | null = null;
 
 function canPlay(): boolean {
   return window.game.players.length === 2;
@@ -28,33 +19,48 @@ function startGame(): void {
     originalContent = mainDiv.innerHTML;
   }
 
-  // Initialize game state
-  state = {
-    playerId: window.game.state.playerId,
-    board: Array(3)
-      .fill(null)
-      .map(() => Array(3).fill(null)),
-    currentTurn: window.game.players[0],
-    winner: null,
-    gameOver: false,
-    isResetting: false,
-  };
-
   // Set up game UI
   renderGameUI();
 
-  // Set up message handler
-  window.game.onMessage = handleGameMessage;
+  // Set up state update handler from server
+  window.game.onGameStateUpdate = handleGameStateUpdate;
 
-  console.log('Tic-Tac-Toe started!');
+  // Send initial action to start the game
+  const action: TicTacToeAction = {
+    type: 'restart',
+    playerId: window.game.state.playerId!,
+  };
+  window.game.sendGameAction('tic-tac-toe', action);
+
+  console.log('Tic-Tac-Toe started (server-authoritative)!');
 }
 
-function handleGameMessage(playerId: string, event: string, payload: unknown): void {
-  if (event === 'move') {
-    const move = payload as { row: number; col: number };
-    handleOpponentMove(playerId, move.row, move.col);
-  } else if (event === 'restart') {
-    resetGame();
+function handleGameStateUpdate(data: unknown): void {
+  const update = data as {
+    gameType: string;
+    state: TicTacToeState;
+    validationError?: string;
+  };
+
+  if (update.gameType !== 'tic-tac-toe') {
+    return; // Not for us
+  }
+
+  if (update.validationError) {
+    console.warn('Invalid move:', update.validationError);
+    showError(update.validationError);
+    return;
+  }
+
+  currentState = update.state;
+  renderBoard();
+  updateStatus();
+
+  // Auto-restart after game over
+  if (currentState.gameOver && !currentState.winner) {
+    scheduleRestart();
+  } else if (currentState.winner) {
+    scheduleRestart();
   }
 }
 
@@ -64,9 +70,10 @@ function renderGameUI(): void {
 
   mainDiv.innerHTML = `
     <div id="tic-tac-toe-game">
-      <h2>Tic-Tac-Toe</h2>
+      <h2>Tic-Tac-Toe (Server-Authoritative)</h2>
       <div id="game-status"></div>
       <div id="turn-indicator"></div>
+      <div id="error-message" style="color: red; font-weight: bold;"></div>
       <div id="game-board"></div>
     </div>
   `;
@@ -77,7 +84,7 @@ function renderGameUI(): void {
 
 function renderBoard(): void {
   const boardDiv = document.getElementById('game-board');
-  if (!boardDiv) return;
+  if (!boardDiv || !currentState) return;
 
   boardDiv.innerHTML = '';
   boardDiv.style.cssText = `
@@ -105,7 +112,7 @@ function renderBoard(): void {
         user-select: none;
       `;
 
-      const cellValue = state.board[row][col];
+      const cellValue = currentState.board[row][col];
       if (cellValue) {
         cell.textContent = getPlayerSymbol(cellValue);
         cell.style.cursor = 'default';
@@ -122,146 +129,50 @@ function renderBoard(): void {
 }
 
 function getPlayerSymbol(playerId: string): string {
-  const playerIndex = window.game.players.indexOf(playerId);
+  if (!currentState) return '?';
+  const playerIndex = currentState.players.indexOf(playerId);
   return playerIndex === 0 ? 'X' : 'O';
 }
 
 function handleCellClick(row: number, col: number): void {
-  // Check if it's our turn
-  if (state.currentTurn !== state.playerId) {
-    console.log('Not your turn!');
+  if (!currentState || !window.game.state.playerId) return;
+
+  // Client-side pre-validation (for UX)
+  if (currentState.currentTurn !== window.game.state.playerId) {
+    showError('Not your turn!');
     return;
   }
 
-  // Check if cell is already occupied
-  if (state.board[row][col] !== null) {
-    console.log('Cell already occupied!');
+  if (currentState.board[row][col] !== null) {
+    showError('Cell already occupied!');
     return;
   }
 
-  // Check if game is over
-  if (state.gameOver) {
-    console.log('Game is over!');
+  if (currentState.gameOver) {
+    showError('Game is over!');
     return;
   }
 
-  // Make the move locally
-  makeMove(state.playerId!, row, col);
-
-  // Send move to other players
-  window.game.sendMessage('move', { row, col });
-}
-
-function handleOpponentMove(playerId: string, row: number, col: number): void {
-  makeMove(playerId, row, col);
-}
-
-function makeMove(playerId: string, row: number, col: number): void {
-  // Update board state
-  state.board[row][col] = playerId;
-
-  // Re-render board
-  renderBoard();
-
-  // Check for winner
-  const winner = checkWinner();
-  if (winner) {
-    state.winner = winner;
-    state.gameOver = true;
-    updateStatus();
-    scheduleRestart();
-    return;
-  }
-
-  // Check for draw
-  if (isBoardFull()) {
-    state.gameOver = true;
-    updateStatus();
-    scheduleRestart();
-    return;
-  }
-
-  // Switch turns
-  const currentIndex = window.game.players.indexOf(state.currentTurn);
-  state.currentTurn = window.game.players[(currentIndex + 1) % window.game.players.length];
-
-  updateStatus();
-}
-
-function checkWinner(): string | null {
-  const lines = [
-    // Rows
-    [
-      [0, 0],
-      [0, 1],
-      [0, 2],
-    ],
-    [
-      [1, 0],
-      [1, 1],
-      [1, 2],
-    ],
-    [
-      [2, 0],
-      [2, 1],
-      [2, 2],
-    ],
-    // Columns
-    [
-      [0, 0],
-      [1, 0],
-      [2, 0],
-    ],
-    [
-      [0, 1],
-      [1, 1],
-      [2, 1],
-    ],
-    [
-      [0, 2],
-      [1, 2],
-      [2, 2],
-    ],
-    // Diagonals
-    [
-      [0, 0],
-      [1, 1],
-      [2, 2],
-    ],
-    [
-      [0, 2],
-      [1, 1],
-      [2, 0],
-    ],
-  ];
-
-  for (const line of lines) {
-    const [a, b, c] = line;
-    const cellA = state.board[a[0]][a[1]];
-    const cellB = state.board[b[0]][b[1]];
-    const cellC = state.board[c[0]][c[1]];
-
-    if (cellA && cellA === cellB && cellA === cellC) {
-      return cellA;
-    }
-  }
-
-  return null;
-}
-
-function isBoardFull(): boolean {
-  return state.board.every((row) => row.every((cell) => cell !== null));
+  // Send action to server
+  const action: TicTacToeAction = {
+    type: 'move',
+    playerId: window.game.state.playerId,
+    move: { row, col },
+  };
+  window.game.sendGameAction('tic-tac-toe', action);
 }
 
 function updateStatus(): void {
+  if (!currentState) return;
+
   const statusDiv = document.getElementById('game-status');
   const turnDiv = document.getElementById('turn-indicator');
 
   if (!statusDiv || !turnDiv) return;
 
-  if (state.winner) {
-    const winnerSymbol = getPlayerSymbol(state.winner);
-    const isLocalWinner = state.winner === state.playerId;
+  if (currentState.winner) {
+    const winnerSymbol = getPlayerSymbol(currentState.winner);
+    const isLocalWinner = currentState.winner === window.game.state.playerId;
     statusDiv.textContent = isLocalWinner
       ? `You win! (${winnerSymbol})`
       : `Player ${winnerSymbol} wins!`;
@@ -269,15 +180,15 @@ function updateStatus(): void {
     statusDiv.style.fontSize = '24px';
     statusDiv.style.fontWeight = 'bold';
     turnDiv.textContent = 'Game will restart in 3 seconds...';
-  } else if (state.gameOver) {
+  } else if (currentState.gameOver) {
     statusDiv.textContent = "It's a draw!";
     statusDiv.style.color = 'blue';
     statusDiv.style.fontSize = '24px';
     statusDiv.style.fontWeight = 'bold';
     turnDiv.textContent = 'Game will restart in 3 seconds...';
   } else {
-    const currentSymbol = getPlayerSymbol(state.currentTurn);
-    const isOurTurn = state.currentTurn === state.playerId;
+    const currentSymbol = getPlayerSymbol(currentState.currentTurn);
+    const isOurTurn = currentState.currentTurn === window.game.state.playerId;
     statusDiv.textContent = '';
     turnDiv.textContent = isOurTurn
       ? `Your turn (${currentSymbol})`
@@ -287,30 +198,30 @@ function updateStatus(): void {
   }
 }
 
-function scheduleRestart(): void {
-  if (state.isResetting) return;
-  state.isResetting = true;
+function showError(message: string): void {
+  const errorDiv = document.getElementById('error-message');
+  if (!errorDiv) return;
 
+  errorDiv.textContent = message;
   setTimeout(() => {
-    // Only the first player sends restart message to avoid duplicates
-    if (state.playerId === window.game.players[0]) {
-      window.game.sendMessage('restart', {});
-    }
-    resetGame();
-  }, 3000);
+    errorDiv.textContent = '';
+  }, 2000);
 }
 
-function resetGame(): void {
-  state.board = Array(3)
-    .fill(null)
-    .map(() => Array(3).fill(null));
-  state.currentTurn = window.game.players[0];
-  state.winner = null;
-  state.gameOver = false;
-  state.isResetting = false;
-
-  renderBoard();
-  updateStatus();
+function scheduleRestart(): void {
+  setTimeout(() => {
+    // Only the first player sends restart
+    if (
+      currentState &&
+      window.game.state.playerId === currentState.players[0]
+    ) {
+      const action: TicTacToeAction = {
+        type: 'restart',
+        playerId: window.game.state.playerId!,
+      };
+      window.game.sendGameAction('tic-tac-toe', action);
+    }
+  }, 3000);
 }
 
 function stopGame(): void {
@@ -320,10 +231,8 @@ function stopGame(): void {
     mainDiv.innerHTML = originalContent;
   }
 
-  // Clear message handler
-  window.game.onMessage = function (player: string, event: string, payload: unknown) {
-    console.log(`Received event [${event}] from player ${player}:`, payload);
-  };
+  // Clear handler
+  window.game.onGameStateUpdate = null;
 
   console.log('Tic-Tac-Toe stopped!');
 }

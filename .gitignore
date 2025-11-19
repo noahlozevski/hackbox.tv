@@ -1,3 +1,25 @@
 
+# Build outputs
 dist/
+site/dist/
+
+# Dependencies
 node_modules
+
+# Local deployment scripts
+deploy-local.sh
+
+# Compiled JS/maps from TypeScript (should be built on server)
+**/*.js.map
+**/*.d.ts
+**/*.d.ts.map
+
+# But keep legacy JS game files that aren't compiled
+!site/*.js
+!site/connect-four.js
+!site/frogger.js
+
+# Config files we DO want to track
+!*.config.js
+!*.config.mjs
+!eslint.config.mjs

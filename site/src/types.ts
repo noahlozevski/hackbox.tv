@@ -1,105 +1,25 @@
 /**
- * Shared types for the hackbox.tv game framework
+ * Client-side types
+ * Re-exports shared types and adds client-specific interfaces
  */
 
-// WebSocket message types from server
-export type ServerMessageType =
-  | 'connected'
-  | 'roomsList'
-  | 'joinedRoom'
-  | 'newClient'
-  | 'clientLeft'
-  | 'message'
-  | 'error';
+// Re-export all shared types
+export * from '../../shared/types';
 
-// Client -> Server message types
-export type ClientMessageType = 'joinRoom' | 'leaveRoom' | 'message';
-
-// Base message structure
-export interface BaseMessage {
-  type: ServerMessageType | ClientMessageType;
-  data?: unknown;
-}
-
-// Specific message payloads
-export interface ConnectedMessage extends BaseMessage {
-  type: 'connected';
-  data: {
-    clientId: string; // Player UUID
-  };
-}
-
-export interface RoomsListMessage extends BaseMessage {
-  type: 'roomsList';
-  data: Array<{
-    name: string;
-    clients: string[]; // Array of player UUIDs in the room
-  }>;
-}
-
-export interface JoinedRoomMessage extends BaseMessage {
-  type: 'joinedRoom';
-  data: {
-    room: string;
-    clients: string[]; // Array of player UUIDs
-  };
-}
-
-export interface NewClientMessage extends BaseMessage {
-  type: 'newClient';
-  data: {
-    clientId: string; // New player UUID
-  };
-}
-
-export interface ClientLeftMessage extends BaseMessage {
-  type: 'clientLeft';
-  data: {
-    clientId: string; // Player UUID who left
-  };
-}
-
-export interface GameMessage extends BaseMessage {
-  type: 'message';
-  data: {
-    playerId: string;
-    message: {
-      event: string;
-      payload: unknown;
-    };
-  };
-}
-
-export interface ErrorMessage extends BaseMessage {
-  type: 'error';
-  data: {
-    error: string;
-  };
-}
-
-// Union of all server messages
-export type ServerMessage =
-  | ConnectedMessage
-  | RoomsListMessage
-  | JoinedRoomMessage
-  | NewClientMessage
-  | ClientLeftMessage
-  | GameMessage
-  | ErrorMessage;
-
-// Game state interface
-export interface GameState {
-  playerId: string | null;
-  currentRoom: string | null;
-}
-
-// Game event callback types
+// Client-specific game framework types
 export type PlayersChangedCallback = (players: string[]) => void;
 export type MessageCallback = (
   playerId: string,
   event: string,
   payload: unknown,
 ) => void;
+export type GameStateCallback = (state: unknown) => void;
+
+// Game state interface
+export interface GameState {
+  playerId: string | null;
+  currentRoom: string | null;
+}
 
 // Main game framework interface
 export interface GameFramework {
@@ -111,9 +31,11 @@ export interface GameFramework {
   // Callbacks
   handlePlayersChanged: PlayersChangedCallback | null;
   onMessage: MessageCallback | null;
+  onGameStateUpdate: GameStateCallback | null;
 
   // Methods
   sendMessage: (event: string, payload: unknown) => void;
+  sendGameAction: (gameType: string, action: unknown) => void;
 }
 
 // Individual game interface that each game must implement

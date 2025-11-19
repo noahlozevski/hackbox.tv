@@ -17,6 +17,7 @@ const game: GameFramework = {
   ws: null,
   handlePlayersChanged: null,
   onMessage: null,
+  onGameStateUpdate: null,
 
   sendMessage(event: string, payload: unknown): void {
     if (!this.ws) {
@@ -31,6 +32,22 @@ const game: GameFramework = {
             event,
             payload,
           },
+        },
+      }),
+    );
+  },
+
+  sendGameAction(gameType: string, action: unknown): void {
+    if (!this.ws) {
+      console.error('WebSocket not connected');
+      return;
+    }
+    this.ws.send(
+      JSON.stringify({
+        type: 'gameAction',
+        data: {
+          gameType,
+          action,
         },
       }),
     );
@@ -136,6 +153,11 @@ function handleServerMessage(data: string): void {
         }
         break;
       }
+      case 'gameStateUpdate':
+        if (game.onGameStateUpdate) {
+          game.onGameStateUpdate(message.data);
+        }
+        break;
       case 'error':
         handleError(message.data.error);
         break;

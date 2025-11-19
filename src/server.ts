@@ -2,6 +2,8 @@ import WebSocket, { Server as WebSocketServer } from 'ws';
 import { Room } from './room';
 import { Client } from './client';
 import { WS } from './types';
+import { GameManager } from './game-manager';
+import type { GameAction } from '../shared/types';
 
 // Server setup
 const PORT = 3000;
@@ -11,6 +13,7 @@ console.log(`WebSocket server is running on ws://${HOST}:${PORT}`);
 
 const rooms: Map<string, Room> = new Map();
 const clients: Map<WS, Client> = new Map();
+const gameManager = new GameManager();
 
 // Hardcoded list of rooms
 const roomNames = ['Room1', 'Room2', 'Room3'];
@@ -101,6 +104,9 @@ function handleMessage(client: Client, message: string) {
       case 'message':
         handleClientMessage(client, parsedMessage.data.message);
         break;
+      case 'gameAction':
+        handleGameAction(client, parsedMessage.data);
+        break;
       default:
         sendError(client, 'Unknown message type');
     }
@@ -183,6 +189,47 @@ function broadcastToRoom(room: Room, message: string, sender?: Client) {
     if (client !== sender) {
       client.ws.send(message);
     }
+  });
+}
+
+// Handle game actions (server-authoritative)
+function handleGameAction(
+  client: Client,
+  data: { gameType: string; action: GameAction },
+) {
+  if (!client.room) {
+    sendError(client, 'You must be in a room to play');
+    return;
+  }
+
+  const { gameType, action } = data;
+
+  // Initialize game if not started
+  if (!gameManager.hasActiveGame(client.room.name)) {
+    const players = client.room.getClientList();
+    if (players.length < 2) {
+      sendError(client, 'Need at least 2 players to start');
+      return;
+    }
+    gameManager.startGame(client.room.name, gameType, players);
+  }
+
+  // Process action
+  const result = gameManager.processAction(client.room.name, action);
+
+  // Broadcast updated state to all players in the room
+  const stateUpdate = JSON.stringify({
+    type: 'gameStateUpdate',
+    data: {
+      gameType,
+      state: result.state,
+      validationError: result.error,
+    },
+  });
+
+  // Send to all clients in room (including sender)
+  client.room.clients.forEach((roomClient) => {
+    roomClient.ws.send(stateUpdate);
   });
 }
 

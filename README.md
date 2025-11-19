@@ -2,6 +2,22 @@
 
 A real-time multiplayer game platform with WebSocket-based multiplayer framework.
 
+> Mobile-first: the games and UI are optimized for mobile devices and are expected to be used on phones.
+
+## 🚨 CODE HYGIENE POLICY 🚨
+
+**ZERO TOLERANCE FOR CODE DEBT**
+
+1. **NO versioned files** - Never create `file-v2.ts`, `file-old.js`, `file.bak`
+2. **NO deprecated code** - Delete immediately, don't comment out
+3. **NO orphaned files** - If you replace a file, DELETE the old one
+4. **Replace, don't duplicate** - Update existing files in place
+5. **Clean as you go** - Leave no trace of old implementations
+
+**Before every commit:** Run `git status` and delete any orphaned files.
+
+---
+
 ## 🚨 IMPORTANT: Deployment Policy 🚨
 
 **ALWAYS DEPLOY AFTER PUSHING TO GIT!**
