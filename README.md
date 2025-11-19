@@ -10,15 +10,16 @@ Whenever you push changes to the repository, you MUST immediately deploy to the 
 
 ### Deployment Steps:
 ```bash
-# After git push, SSH into the server and run:
+# After git push, deploy remotely:
+ssh hackbox "cd /home/noahlozevski/app && git pull && ./deploy.sh"
+```
+
+Or SSH in and deploy manually:
+```bash
+ssh hackbox
 cd /home/noahlozevski/app
 git pull
 ./deploy.sh
-```
-
-Or deploy remotely:
-```bash
-ssh your-server "cd /home/noahlozevski/app && git pull && ./deploy.sh"
 ```
 
 ## Development
