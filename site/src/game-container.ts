@@ -100,7 +100,6 @@ export function showGameContainer(
     }
     if (currentId && window.game?.ws?.readyState === WebSocket.OPEN) {
       window.game.sendMessage('stopGame', currentId);
-      window.game.sendMessage('clearGameState', currentId);
     }
   };
 

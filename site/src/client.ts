@@ -130,8 +130,7 @@ window.startGame = async (
     gameEntry._originalStop = gameEntry.stop;
     // Wrap the stop method to broadcast stop event and save/clear state
     gameEntry.stop = function (clearStateArg?: boolean) {
-      // Hidden E2E test game should clear server state on stop to avoid auto-resume
-      const defaultClearState = gameId === 'e2eTest';
+      const defaultClearState = false;
       const clearState = clearStateArg ?? defaultClearState;
 
       // Save state first, then stop game (unless we're clearing)
