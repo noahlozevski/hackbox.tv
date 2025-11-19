@@ -85,4 +85,37 @@ describe('Prod WebSocket connection E2E', () => {
 
     ws2.close();
   }, 60_000);
+
+  it('exposes seeded default rooms in the rooms list', async () => {
+    const ws = new WebSocket(WS_URL);
+
+    await new Promise<void>((resolve, reject) => {
+      ws.once('open', () => resolve());
+      ws.once('error', (err) => reject(err));
+    });
+
+    const roomsList = (await waitForMessage(
+      ws,
+      (m) => m.type === 'roomsList',
+    )) as ServerMessage & { type: 'roomsList' };
+
+    ws.close();
+
+    if (!Array.isArray(roomsList.data)) {
+      throw new Error('roomsList data is not an array');
+    }
+
+    const roomNames = roomsList.data.map((room) => room.name);
+
+    // These are the seeded default rooms configured on the server.
+    expect(roomNames).toEqual(
+      expect.arrayContaining([
+        'pixel-party',
+        'latency-lounge',
+        'chaos-corner',
+        'debug-disco',
+        'infinite-lobby',
+      ]),
+    );
+  }, 30_000);
 });
