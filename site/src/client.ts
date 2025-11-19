@@ -115,9 +115,23 @@ function handleServerMessage(message: ServerMessage): void {
         }
       }
       break;
-    case 'joinedRoom':
-      handleJoinedRoom(message.data.room, message.data.clients || []);
+    case 'joinedRoom': {
+      const data = message.data as {
+        room?: string;
+        roomName?: string;
+        clients?: string[];
+      };
+      const roomName = data.room ?? data.roomName;
+      const clients = Array.isArray(data.clients) ? data.clients : [];
+
+      if (!roomName) {
+        console.warn('joinedRoom message missing room name', message.data);
+        break;
+      }
+
+      handleJoinedRoom(roomName, clients);
       break;
+    }
     case 'newClient':
       handleNewClient(message.data.clientId);
       if (game.handlePlayersChanged) {

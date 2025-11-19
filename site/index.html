@@ -33,14 +33,15 @@
     <title>Hackbox.tv.lozev.ski</title>
     <script type="module" src="dist/types.js"></script>
     <script type="module" src="dist/client.js"></script>
-    <script type="module" src="dist/connect-four.js"></script>
-    <script type="module" src="dist/tic-tac-toe.js"></script>
-    <script type="module" src="dist/rock-paper-scissors.js"></script>
-    <script type="module" src="dist/frogger.js"></script>
-    <script type="module" src="dist/arena-bumpers.js"></script>
+    <script type="module" src="dist/site/src/connect-four.js"></script>
+    <script type="module" src="dist/site/src/tic-tac-toe.js"></script>
+    <script type="module" src="dist/site/src/rock-paper-scissors.js"></script>
+    <script type="module" src="dist/site/src/frogger.js"></script>
+    <script type="module" src="dist/site/src/arena-bumpers.js"></script>
     <script type="module" src="dist/site/src/marble-race.js"></script>
-    <script type="module" src="dist/top-down-tag.js"></script>
-    <script type="module" src="dist/lightcycle.js"></script>
+    <script type="module" src="dist/site/src/tilt-pong.js"></script>
+    <script type="module" src="dist/site/src/top-down-tag.js"></script>
+    <script type="module" src="dist/site/src/lightcycle.js"></script>
     <style>
       /* Reset and base styles */
       * {
@@ -337,6 +338,9 @@
             </button>
             <button id="marble-race" onclick="games.marbleRace.start()">
               Marble Race
+            </button>
+            <button id="tilt-pong" onclick="games.tiltPong.start()">
+              Tilt Pong
             </button>
             <button id="arena-bumpers" onclick="games.arenaBumpers.start()">
               Arena Bumpers
