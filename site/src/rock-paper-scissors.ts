@@ -1,4 +1,5 @@
-import type { Game, PlayerInfo } from './types.js';
+import type { Game } from './types.js';
+import { getPlayerIds } from './player-utils.js';
 import { registerGame } from './game-registry.js';
 
 type Choice = 'rock' | 'paper' | 'scissors';
@@ -222,7 +223,12 @@ function bothPlayersChose(): boolean {
 function resolveRound(): void {
   if (!state) return;
 
-  const [first, second] = window.game.players;
+  const playerIds = getPlayerIds(window.game.players);
+  const first = playerIds[0];
+  const second = playerIds[1];
+
+  if (!first || !second) return;
+
   const firstChoice = state.choices[first];
   const secondChoice = state.choices[second];
 
@@ -325,7 +331,8 @@ function stopGame(): void {
 
 function getOpponentId(): string {
   const playerId = window.game.state.playerId;
-  return window.game.players.find((id) => id !== playerId) ?? '';
+  const playerIds = getPlayerIds(window.game.players);
+  return playerIds.find((id) => id !== playerId) ?? '';
 }
 
 const rockPaperScissorsGame: Game = {

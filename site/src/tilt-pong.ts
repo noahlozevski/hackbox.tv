@@ -1,4 +1,5 @@
-import type { Game, MessageCallback, PlayersChangedCallback } from './types.js';
+import type { Game, MessageCallback, PlayersChangedCallback, PlayerInfo } from './types.js';
+import { getPlayerIds } from './player-utils.js';
 
 type Edge = 'top' | 'right' | 'bottom' | 'left';
 
@@ -91,7 +92,7 @@ function start(): void {
     return;
   }
 
-  const ids = [...window.game.players].sort();
+  const ids = getPlayerIds(window.game.players);
   hostPlayerId = ids[0] ?? null;
 
   installStyles();
@@ -575,11 +576,11 @@ function teardownNetworking(): void {
 }
 
 function handlePlayersChanged(playersList: PlayerInfo[]): void {
-  const sorted = [...playersList].sort();
-  initializePlayers(sorted);
+  const ids = getPlayerIds(playersList);
+  initializePlayers(ids);
 
   // Ensure host stays deterministic if players join/leave
-  hostPlayerId = sorted[0] ?? null;
+  hostPlayerId = ids[0] ?? null;
 }
 
 function handleRemoteInput(playerId: string, net: PaddleNetState): void {

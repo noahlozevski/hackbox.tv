@@ -1,8 +1,10 @@
 import type {
   Game,
+  PlayerInfo,
   MessageCallback,
   PlayersChangedCallback,
 } from './types.js';
+import { getPlayerIds, getFirstPlayerId } from './player-utils.js';
 import { registerGame } from './game-registry.js';
 
 interface NetPlayerState {
@@ -83,9 +85,8 @@ function start(): void {
     return;
   }
 
-  const sortedIds = [...window.game.players].sort();
-  hostPlayerId = sortedIds[0] ?? null;
-  itPlayerId = sortedIds[0] ?? null;
+  hostPlayerId = getFirstPlayerId(window.game.players) ?? null;
+  itPlayerId = getFirstPlayerId(window.game.players) ?? null;
 
   installStyles();
   createUI();
@@ -362,7 +363,7 @@ function createUI(): void {
 function setupPlayers(): void {
   players = new Map();
 
-  const ids = [...window.game.players].sort();
+  const ids = getPlayerIds(window.game.players).sort();
   const colors = generateColorPalette(ids.length);
 
   const cols = Math.max(2, Math.ceil(Math.sqrt(ids.length)));
@@ -542,14 +543,15 @@ function teardownNetworking(): void {
 }
 
 function handlePlayersChanged(playersList: PlayerInfo[]): void {
-  const remaining = new Set(playersList);
+  const playerIds = getPlayerIds(playersList);
+  const remaining = new Set(playerIds);
   for (const id of players.keys()) {
     if (!remaining.has(id)) {
       players.delete(id);
     }
   }
 
-  const ids = [...playersList].sort();
+  const ids = playerIds.sort();
   const colors = generateColorPalette(ids.length);
 
   ids.forEach((id, index) => {
@@ -597,14 +599,15 @@ function handlePlayersChanged(playersList: PlayerInfo[]): void {
   });
 
   if (!hostPlayerId) {
-    const sorted = [...playersList].sort();
-    hostPlayerId = sorted[0] ?? null;
+    hostPlayerId = getFirstPlayerId(playersList) ?? null;
   }
 
   if (!itPlayerId && playersList.length > 0) {
-    const sorted = [...playersList].sort();
-    itPlayerId = sorted[0] ?? null;
-    applyItUpdate(itPlayerId);
+    const firstId = getFirstPlayerId(playersList);
+    if (firstId) {
+      itPlayerId = firstId;
+      applyItUpdate(firstId);
+    }
   }
 
   updateHud();
@@ -617,7 +620,7 @@ function handleRemoteState(id: string, net: NetPlayerState): void {
 
   const existing = players.get(id);
   if (!existing) {
-    const ids = [...window.game.players].sort();
+    const ids = getPlayerIds(window.game.players).sort();
     const colors = generateColorPalette(ids.length);
     const idx = ids.indexOf(id);
     const color = colors[idx] ?? '#f97316';

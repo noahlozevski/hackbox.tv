@@ -81,7 +81,7 @@ export function getFirstPlayerId(players: PlayerInfo[]): string | null {
  */
 export function getNextPlayerId(
   players: PlayerInfo[],
-  currentId: string,
+  currentId: string | null,
 ): string | null {
   const index = getPlayerIndex(players, currentId);
   if (index === -1) return getFirstPlayerId(players);

@@ -1,4 +1,5 @@
 import type { Game, PlayerInfo } from './types.js';
+import { getPlayerIds } from './player-utils.js';
 
 interface NetPlayerState {
   x: number;
@@ -347,7 +348,7 @@ function createUI(): void {
 function setupPlayers(): void {
   players = new Map();
 
-  const ids = [...window.game.players].sort();
+  const ids = getPlayerIds(window.game.players).sort();
   const colors = generateColorPalette(ids.length);
 
   ids.forEach((id, index) => {
@@ -506,16 +507,17 @@ function teardownNetworking(): void {
 }
 
 function handlePlayersChanged(playersList: PlayerInfo[]): void {
-  const remaining = new Set(playersList);
+  const playerIds = getPlayerIds(playersList);
+  const remaining = new Set(playerIds);
   for (const id of players.keys()) {
     if (!remaining.has(id)) {
       players.delete(id);
     }
   }
 
-  for (const id of playersList) {
+  for (const id of playerIds) {
     if (!players.has(id)) {
-      const ids = [...playersList].sort();
+      const ids = getPlayerIds(playersList).sort();
       const colors = generateColorPalette(ids.length);
       const idx = ids.indexOf(id);
       const angle = (idx / ids.length) * Math.PI * 2;
@@ -551,7 +553,7 @@ function handleRemoteState(id: string, net: NetPlayerState): void {
   }
   const existing = players.get(id);
   if (!existing) {
-    const ids = [...window.game.players].sort();
+    const ids = getPlayerIds(window.game.players).sort();
     const colors = generateColorPalette(ids.length);
     const idx = ids.indexOf(id);
     const color = colors[idx] ?? '#f97316';

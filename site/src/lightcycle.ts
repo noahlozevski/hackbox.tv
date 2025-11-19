@@ -1,3 +1,4 @@
+import { getPlayerIds } from "./player-utils.js";
 import type { Game, MessageCallback } from './types.js';
 import { registerGame } from './game-registry.js';
 
@@ -244,7 +245,7 @@ function setupPlayers(
   localPlayerId: string,
   grid: (string | null)[][],
 ): Map<string, PlayerRuntimeState> {
-  const ids = [...window.game.players].sort();
+  const ids = getPlayerIds(window.game.players).sort();
   const colors = generateColorPalette(ids.length);
   const players = new Map<string, PlayerRuntimeState>();
 

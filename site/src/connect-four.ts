@@ -10,7 +10,7 @@ type Cell = string | null;
 interface ConnectFourState {
   playerId: string | null;
   board: Cell[][];
-  currentTurn: string;
+  currentTurn: string | null;
   winner: string | null;
   gameOver: boolean;
   isResetting: boolean;
@@ -214,8 +214,8 @@ function makeMove(playerId: string, col: number, row: number): void {
     return;
   }
 
-  state.currentTurn =
-    getNextPlayerId(window.game.players, state.currentTurn) || state.currentTurn;
+  const nextPlayer = getNextPlayerId(window.game.players, state.currentTurn || state.playerId);
+  state.currentTurn = nextPlayer;
   updateStatus();
 }
 

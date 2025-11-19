@@ -1,4 +1,5 @@
 import type { Game, PlayerInfo } from './types.js';
+import { getPlayerIds } from './player-utils.js';
 
 interface NetMarbleState {
   x: number;
@@ -405,7 +406,7 @@ function createUI(): void {
 function setupMarbles(): void {
   marbles = new Map();
 
-  const ids = [...window.game.players].sort();
+  const ids = getPlayerIds(window.game.players).sort();
   const colors = generateColors(ids.length);
 
   ids.forEach((id, index) => {
@@ -588,14 +589,15 @@ function teardownNetworking(): void {
 }
 
 function handlePlayersChanged(playersList: PlayerInfo[]): void {
-  const active = new Set(playersList);
+  const playerIds = getPlayerIds(playersList);
+  const active = new Set(playerIds);
   for (const id of marbles.keys()) {
     if (!active.has(id)) {
       marbles.delete(id);
     }
   }
 
-  const ids = [...playersList].sort();
+  const ids = playerIds.sort();
   const colors = generateColors(ids.length);
 
   ids.forEach((id, index) => {
