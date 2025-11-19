@@ -4,8 +4,6 @@ import type { ServerMessage } from '../shared/types';
 
 const WS_URL = process.env.HACKBOX_WS_URL ?? 'wss://hackbox.tv.lozev.ski/ws/';
 
-const E2E_ENABLED = process.env.HACKBOX_E2E === '1';
-
 function waitForMessage(
   ws: WebSocket,
   predicate: (msg: ServerMessage) => boolean,
@@ -34,10 +32,7 @@ function waitForMessage(
   });
 }
 
-// These tests hit the production WebSocket server and are therefore
-// opt-in only. Enable via: HACKBOX_E2E=1 npm test -- connection.e2e.test.ts
-// or use the dedicated npm script (see package.json).
-describe.skipIf(!E2E_ENABLED)('Prod WebSocket connection E2E', () => {
+describe('Prod WebSocket connection E2E', () => {
   it('can reconnect and rejoin the same room', async () => {
     // First connection
     const ws1 = new WebSocket(WS_URL);
