@@ -108,8 +108,9 @@ function start(): void {
   const canvas = overlay.querySelector<HTMLCanvasElement>('#lightcycle-canvas');
   const hudEl = overlay.querySelector<HTMLDivElement>('#lightcycle-hud');
   const statusEl = overlay.querySelector<HTMLDivElement>('#lightcycle-status');
-  const touchButtons =
-    overlay.querySelectorAll<HTMLButtonElement>('.lightcycle-control-btn');
+  const touchButtons = overlay.querySelectorAll<HTMLButtonElement>(
+    '.lightcycle-control-btn',
+  );
 
   if (!canvas || !hudEl || !statusEl) {
     overlay.remove();
@@ -130,7 +131,7 @@ function start(): void {
 
   const resizeHandler = () => handleResize(canvas, ctx);
   const keyDownHandler = (e: KeyboardEvent) => handleKeyDown(e);
-  const keyUpHandler = (e: KeyboardEvent) => handleKeyUp(e);
+  const keyUpHandler = () => handleKeyUp();
 
   window.addEventListener('resize', resizeHandler, { passive: true });
   window.addEventListener('keydown', keyDownHandler);
@@ -145,9 +146,8 @@ function start(): void {
   });
 
   const previousOnMessage = window.game.onMessage;
-  const unsubscribeMessages = window.game.subscribeToMessages(
-    handleRemoteMessage,
-  );
+  const unsubscribeMessages =
+    window.game.subscribeToMessages(handleRemoteMessage);
 
   state = {
     gridCols: GRID_COLS,
@@ -172,8 +172,9 @@ function start(): void {
     previousOnMessage,
   };
 
-  const exitButtons =
-    overlay.querySelectorAll<HTMLButtonElement>('[data-lightcycle-exit]');
+  const exitButtons = overlay.querySelectorAll<HTMLButtonElement>(
+    '[data-lightcycle-exit]',
+  );
   exitButtons.forEach((btn) => {
     btn.addEventListener('click', () => stop());
   });
@@ -462,7 +463,10 @@ function installStyles(): void {
   document.head.appendChild(currentStyleEl);
 }
 
-function handleResize(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D): void {
+function handleResize(
+  canvas: HTMLCanvasElement,
+  ctx: CanvasRenderingContext2D,
+): void {
   const dpr = window.devicePixelRatio || 1;
   const rect = canvas.getBoundingClientRect();
   canvas.width = Math.max(1, Math.floor(rect.width * dpr));
@@ -507,7 +511,7 @@ function handleKeyDown(event: KeyboardEvent): void {
   }
 }
 
-function handleKeyUp(_event: KeyboardEvent): void {
+function handleKeyUp(): void {
   // No-op for now; we treat input as instant turns only.
 }
 
@@ -605,7 +609,7 @@ function handleRemoteMessage(
 
   const data = payload as { x: number; y: number; alive: boolean };
 
-  let player = state.players.get(playerId);
+  const player = state.players.get(playerId);
   if (!player) {
     // Ignore messages from players not in the current roster
     return;
@@ -712,10 +716,7 @@ function render(): void {
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, width, height);
 
-  const cellSize = Math.min(
-    width / state.gridCols,
-    height / state.gridRows,
-  );
+  const cellSize = Math.min(width / state.gridCols, height / state.gridRows);
   const gridWidth = cellSize * state.gridCols;
   const gridHeight = cellSize * state.gridRows;
   const offsetX = (width - gridWidth) / 2;
@@ -802,4 +803,3 @@ const lightcycleGame: Game = {
 registerGame('lightcycle', lightcycleGame);
 
 export {};
-

@@ -82,80 +82,83 @@ window.game = game;
 connection.connect('/ws/');
 game.ws = connection.getWebSocket();
 
+// Try to rejoin the last room on reload/reconnect
+const persisted = connection.getPersistedState();
+if (persisted?.lastRoom) {
+  // wait a tick so the socket has a chance to open
+  window.setTimeout(() => {
+    joinRoom(persisted.lastRoom!);
+  }, 200);
+}
+
 connection.addMessageListener((message: ServerMessage) => {
   handleServerMessage(message);
 });
 
 function handleServerMessage(message: ServerMessage): void {
-    switch (message.type) {
-      case 'connected':
-        console.log(
-          'Connected to server with client ID:',
-          message.data.clientId,
+  switch (message.type) {
+    case 'connected':
+      console.log('Connected to server with client ID:', message.data.clientId);
+      game.state.playerId = message.data.clientId;
+      break;
+    case 'roomsList':
+      // message.data is Array<{ name: string; clients: string[] }>
+      handleRoomsList(message.data);
+      // Update the client list if we are in a room
+      if (game.state.currentRoom) {
+        const room = message.data.find(
+          (room: { name: string; clients: string[] }) =>
+            room.name === game.state.currentRoom,
         );
-        game.state.playerId = message.data.clientId;
-        break;
-      case 'roomsList':
-        // message.data is Array<{ name: string; clients: string[] }>
-        handleRoomsList(message.data);
-        // Update the client list if we are in a room
-        if (game.state.currentRoom) {
-          const room = message.data.find(
-            (room: { name: string; clients: string[] }) =>
-              room.name === game.state.currentRoom,
-          );
-          if (room && game.handlePlayersChanged) {
-            game.handlePlayersChanged(room.clients.sort());
-          }
+        if (room && game.handlePlayersChanged) {
+          game.handlePlayersChanged(room.clients.sort());
         }
-        break;
-      case 'joinedRoom':
-        handleJoinedRoom(
-          message.data.room,
-          message.data.clients || [],
-        );
-        break;
-      case 'newClient':
-        handleNewClient(message.data.clientId);
-        if (game.handlePlayersChanged) {
-          game.handlePlayersChanged(
-            [...game.players, message.data.clientId].sort(),
-          );
-        }
-        break;
-      case 'clientLeft':
-        handleClientLeft(message.data.clientId);
-        if (game.handlePlayersChanged) {
-          game.handlePlayersChanged(
-            game.players
-              .filter((player) => player !== message.data.clientId)
-              .sort(),
-          );
-        }
-        break;
-      case 'message': {
-        const clientId = message.data.playerId;
-        const event = message.data.message.event;
-        const payload = message.data.message.payload;
-        if (game.onMessage) {
-          game.onMessage(clientId, event, payload);
-        }
-        if (event === 'chat') {
-          handleChatMessage(clientId, payload as string);
-        }
-        break;
       }
-      case 'gameStateUpdate':
-        if (game.onGameStateUpdate) {
-          game.onGameStateUpdate(message.data);
-        }
-        break;
-      case 'error':
-        handleError(message.data.error);
-        break;
-      default:
-        console.warn('Unknown message type:', (message as { type: string }).type);
+      break;
+    case 'joinedRoom':
+      handleJoinedRoom(message.data.room, message.data.clients || []);
+      break;
+    case 'newClient':
+      handleNewClient(message.data.clientId);
+      if (game.handlePlayersChanged) {
+        game.handlePlayersChanged(
+          [...game.players, message.data.clientId].sort(),
+        );
+      }
+      break;
+    case 'clientLeft':
+      handleClientLeft(message.data.clientId);
+      if (game.handlePlayersChanged) {
+        game.handlePlayersChanged(
+          game.players
+            .filter((player) => player !== message.data.clientId)
+            .sort(),
+        );
+      }
+      break;
+    case 'message': {
+      const clientId = message.data.playerId;
+      const event = message.data.message.event;
+      const payload = message.data.message.payload;
+      if (game.onMessage) {
+        game.onMessage(clientId, event, payload);
+      }
+      if (event === 'chat') {
+        handleChatMessage(clientId, payload as string);
+      }
+      break;
     }
+    case 'gameStateUpdate':
+      if (game.onGameStateUpdate) {
+        game.onGameStateUpdate(message.data);
+      }
+      break;
+    case 'error':
+      handleError(message.data.error);
+      break;
+    default:
+      console.warn('Unknown message type:', (message as { type: string }).type);
+  }
 }
 
 function handleRoomsList(
@@ -182,6 +185,7 @@ function joinRoom(roomName: string): void {
 
 function handleJoinedRoom(roomName: string, clients: string[]): void {
   game.state.currentRoom = roomName;
+  connection.setLastRoom(roomName);
   const roomNameEl = document.getElementById('roomName');
   if (roomNameEl) {
     roomNameEl.textContent = 'Room: ' + roomName;

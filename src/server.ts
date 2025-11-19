@@ -88,10 +88,10 @@ function sendAvailableRooms(client: Client) {
   MessageBuilder.sendRoomsList(client, roomsInfo);
 }
 
-function isJoinRoomMessage(
-  message: ClientMessage,
-): message is JoinRoomRequest {
-  return message.type === 'joinRoom' && typeof message.data?.roomName === 'string';
+function isJoinRoomMessage(message: ClientMessage): message is JoinRoomRequest {
+  return (
+    message.type === 'joinRoom' && typeof message.data?.roomName === 'string'
+  );
 }
 
 function isGameActionMessage(
@@ -107,38 +107,50 @@ function isGameActionMessage(
 
 function handleMessage(client: Client, message: string) {
   try {
-    const parsed = JSON.parse(message) as Partial<ClientMessage>;
+    const parsed = JSON.parse(message) as Partial<ClientMessage> & {
+      data?: unknown;
+    };
 
-    if (!parsed || typeof parsed !== 'object' || typeof parsed.type !== 'string') {
+    if (
+      !parsed ||
+      typeof parsed !== 'object' ||
+      typeof parsed.type !== 'string'
+    ) {
       MessageBuilder.sendError(client, 'Invalid message format');
       return;
     }
 
     switch (parsed.type) {
       case 'joinRoom': {
-        if (!isJoinRoomMessage(parsed as ClientMessage)) {
+        if (!parsed.data || !isJoinRoomMessage(parsed as ClientMessage)) {
           MessageBuilder.sendError(client, 'Invalid joinRoom payload');
           return;
         }
-        handleJoinRoom(client, parsed.data.roomName);
+        const data = parsed.data as JoinRoomRequest['data'];
+        handleJoinRoom(client, data.roomName);
         break;
       }
       case 'message': {
-        if (!parsed.data || typeof (parsed.data as { message?: unknown }).message !== 'string') {
+        const data = parsed.data as
+          | { message?: { event: string; payload: unknown } }
+          | undefined;
+        if (
+          !data ||
+          !data.message ||
+          typeof data.message.payload !== 'string'
+        ) {
           MessageBuilder.sendError(client, 'Invalid message payload');
           return;
         }
-        const { message: messageContent } = parsed
-          .data as { message: string };
-        handleClientMessage(client, messageContent);
+        handleClientMessage(client, data.message.payload as string);
         break;
       }
       case 'gameAction': {
-        if (!isGameActionMessage(parsed as ClientMessage)) {
+        if (!parsed.data || !isGameActionMessage(parsed as ClientMessage)) {
           MessageBuilder.sendError(client, 'Invalid gameAction payload');
           return;
         }
-        handleGameAction(client, parsed.data);
+        handleGameAction(client, parsed.data as GameActionRequest['data']);
         break;
       }
       default:

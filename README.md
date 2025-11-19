@@ -26,7 +26,17 @@ Whenever you push changes to the repository, you MUST immediately deploy to the 
 
 ### Deployment Steps:
 ```bash
-# After git push, if deploy-local.sh exists (local machine only), use it:
+# 1) Build and test locally
+npm run lint
+npm test
+npm run build
+
+# 2) Commit and PUSH your changes
+git add .
+git commit -m "Your change"
+git push
+
+# 3) Only AFTER push, deploy:
 ./deploy-local.sh
 
 # Otherwise, deploy remotely:
@@ -42,6 +52,11 @@ git pull
 ```
 
 **Note:** `deploy-local.sh` is gitignored and only exists on the development machine for convenience.
+
+> Important: The deploy scripts always build from the code on the server.
+> If you forget to `git push` before running `./deploy-local.sh`, the remote
+> build will use the old code and can fail with TypeScript errors even though
+> your local build works. Always push first, then deploy.
 
 ## Development
 
