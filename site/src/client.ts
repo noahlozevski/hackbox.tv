@@ -570,7 +570,15 @@ function updateQRCode(roomName: string): void {
     params.set('game', game.currentGame);
   }
 
-  const shareUrl = `${window.location.origin}${window.location.pathname}?${params.toString()}`;
+  // Build a dedicated share URL that points at the server-rendered share page
+  const encodedRoom = encodeURIComponent(roomName);
+  const encodedGame = game.currentGame
+    ? encodeURIComponent(game.currentGame)
+    : null;
+  const sharePath = encodedGame
+    ? `/share/${encodedRoom}/${encodedGame}`
+    : `/share/${encodedRoom}`;
+  const shareUrl = `${window.location.origin}${sharePath}`;
 
   updateOpenGraphMetadata(roomName, game.currentGame ?? null, shareUrl);
 
