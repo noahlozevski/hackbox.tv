@@ -83,6 +83,19 @@ const rooms: Map<string, Room> = new Map();
 const clients: Map<WS, Client> = new Map();
 const gameManager = new GameManager();
 
+// Default rooms with fun, URL-safe names
+const DEFAULT_ROOMS = [
+  'pixel-party',
+  'latency-lounge',
+  'chaos-corner',
+  'debug-disco',
+  'infinite-lobby',
+];
+
+for (const roomName of DEFAULT_ROOMS) {
+  rooms.set(roomName, new Room(roomName));
+}
+
 function getOrCreateRoom(roomName: string): Room | null {
   const sanitized = roomName.trim();
   if (!sanitized || sanitized.length > 32) {
