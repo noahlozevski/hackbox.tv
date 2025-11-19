@@ -13,10 +13,7 @@ export type ServerMessageType =
   | 'error';
 
 // Client -> Server message types
-export type ClientMessageType =
-  | 'joinRoom'
-  | 'leaveRoom'
-  | 'message';
+export type ClientMessageType = 'joinRoom' | 'leaveRoom' | 'message';
 
 // Base message structure
 export interface BaseMessage {
@@ -28,18 +25,16 @@ export interface BaseMessage {
 export interface ConnectedMessage extends BaseMessage {
   type: 'connected';
   data: {
-    id: string; // Player UUID
+    clientId: string; // Player UUID
   };
 }
 
 export interface RoomsListMessage extends BaseMessage {
   type: 'roomsList';
-  data: {
-    rooms: Array<{
-      name: string;
-      clients: string[]; // Array of player UUIDs in the room
-    }>;
-  };
+  data: Array<{
+    name: string;
+    clients: string[]; // Array of player UUIDs in the room
+  }>;
 }
 
 export interface JoinedRoomMessage extends BaseMessage {
@@ -53,14 +48,14 @@ export interface JoinedRoomMessage extends BaseMessage {
 export interface NewClientMessage extends BaseMessage {
   type: 'newClient';
   data: {
-    id: string; // New player UUID
+    clientId: string; // New player UUID
   };
 }
 
 export interface ClientLeftMessage extends BaseMessage {
   type: 'clientLeft';
   data: {
-    id: string; // Player UUID who left
+    clientId: string; // Player UUID who left
   };
 }
 
@@ -100,7 +95,11 @@ export interface GameState {
 
 // Game event callback types
 export type PlayersChangedCallback = (players: string[]) => void;
-export type MessageCallback = (playerId: string, event: string, payload: unknown) => void;
+export type MessageCallback = (
+  playerId: string,
+  event: string,
+  payload: unknown,
+) => void;
 
 // Main game framework interface
 export interface GameFramework {

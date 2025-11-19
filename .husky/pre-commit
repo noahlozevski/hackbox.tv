@@ -1,0 +1,8 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Run typecheck on all TypeScript files
+npm run typecheck
+
+# Run lint-staged for linting and formatting
+npx lint-staged

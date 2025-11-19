@@ -1,10 +1,4 @@
-import type {
-  GameFramework,
-  GameRegistry,
-  ServerMessage,
-  PlayersChangedCallback,
-  MessageCallback,
-} from './types.js';
+import type { GameFramework, GameRegistry, ServerMessage } from './types.js';
 
 declare global {
   interface Window {
@@ -56,7 +50,11 @@ game.handlePlayersChanged = function (players: string[]): void {
   }
 };
 
-game.onMessage = function (player: string, event: string, payload: unknown): void {
+game.onMessage = function (
+  player: string,
+  event: string,
+  payload: unknown,
+): void {
   console.log(`Received event [${event}] from player ${player}:`, payload);
 };
 
@@ -65,7 +63,7 @@ window.game = game;
 const ws = new WebSocket('wss://hackbox.tv.lozev.ski/ws/');
 game.ws = ws;
 
-ws.addEventListener('open', function (event) {
+ws.addEventListener('open', function () {
   console.log('Connected to WebSocket server.');
 });
 
@@ -74,7 +72,7 @@ ws.addEventListener('message', function (event) {
   handleServerMessage(event.data);
 });
 
-ws.addEventListener('close', function (event) {
+ws.addEventListener('close', function () {
   console.log('WebSocket connection closed.');
 });
 
@@ -87,14 +85,17 @@ function handleServerMessage(data: string): void {
     const message = JSON.parse(data) as ServerMessage;
     switch (message.type) {
       case 'connected':
-        console.log('Connected to server with client ID:', message.data.id);
-        game.state.playerId = message.data.id;
+        console.log(
+          'Connected to server with client ID:',
+          message.data.clientId,
+        );
+        game.state.playerId = message.data.clientId;
         break;
       case 'roomsList':
-        handleRoomsList(message.data.rooms);
+        handleRoomsList(message.data);
         // Update the client list if we are in a room
         if (game.state.currentRoom) {
-          const room = message.data.rooms.find(
+          const room = message.data.find(
             (room) => room.name === game.state.currentRoom,
           );
           if (room && game.handlePlayersChanged) {
@@ -106,20 +107,24 @@ function handleServerMessage(data: string): void {
         handleJoinedRoom(message.data.room, message.data.clients);
         break;
       case 'newClient':
-        handleNewClient(message.data.id);
-        if (game.handlePlayersChanged) {
-          game.handlePlayersChanged([...game.players, message.data.id].sort());
-        }
-        break;
-      case 'clientLeft':
-        handleClientLeft(message.data.id);
+        handleNewClient(message.data.clientId);
         if (game.handlePlayersChanged) {
           game.handlePlayersChanged(
-            game.players.filter((player) => player !== message.data.id).sort(),
+            [...game.players, message.data.clientId].sort(),
           );
         }
         break;
-      case 'message':
+      case 'clientLeft':
+        handleClientLeft(message.data.clientId);
+        if (game.handlePlayersChanged) {
+          game.handlePlayersChanged(
+            game.players
+              .filter((player) => player !== message.data.clientId)
+              .sort(),
+          );
+        }
+        break;
+      case 'message': {
         const clientId = message.data.playerId;
         const event = message.data.message.event;
         const payload = message.data.message.payload;
@@ -130,11 +135,15 @@ function handleServerMessage(data: string): void {
           handleChatMessage(clientId, payload as string);
         }
         break;
+      }
       case 'error':
         handleError(message.data.error);
         break;
       default:
-        console.warn('Unknown message type:', (message as any).type);
+        console.warn(
+          'Unknown message type:',
+          (message as { type: string }).type,
+        );
     }
   } catch (error) {
     console.error('Error parsing message from server:', error);
@@ -176,7 +185,9 @@ function handleJoinedRoom(roomName: string, clients: string[]): void {
     roomNameEl.textContent = 'Room: ' + roomName;
   }
 
-  const messageInput = document.getElementById('messageInput') as HTMLInputElement;
+  const messageInput = document.getElementById(
+    'messageInput',
+  ) as HTMLInputElement;
   const sendButton = document.getElementById('sendButton') as HTMLButtonElement;
   if (messageInput) messageInput.disabled = false;
   if (sendButton) sendButton.disabled = false;
@@ -256,7 +267,9 @@ function addSystemMessage(message: string): void {
 }
 
 // Chat UI handlers
-const messageInput = document.getElementById('messageInput') as HTMLInputElement;
+const messageInput = document.getElementById(
+  'messageInput',
+) as HTMLInputElement;
 const sendButton = document.getElementById('sendButton') as HTMLButtonElement;
 
 if (sendButton) {

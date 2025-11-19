@@ -487,6 +487,7 @@ function froggerStart() {
     document.body.innerHTML = froggerOriginal.body;
     document.head.innerHTML = froggerOriginal.head;
     game.state = froggerOriginal.state;
+    froggerCleanup = null;
   }
   froggerCleanup = cleanupFrogger;
 
