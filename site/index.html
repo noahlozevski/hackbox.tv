@@ -31,8 +31,10 @@
     <meta name="description" content="Chat and game website" />
 
     <title>Hackbox.tv.lozev.ski</title>
-    <script src="client.js" defer></script>
+    <script type="module" src="dist/types.js"></script>
+    <script type="module" src="dist/client.js"></script>
     <script src="connect-four.js" defer></script>
+    <script type="module" src="dist/tic-tac-toe.js"></script>
     <style>
       /* Reset and base styles */
       * {
@@ -328,9 +330,8 @@
               Connect Four
             </button>
             <button
-              class="unreleased"
               id="tic-tac-toe"
-              onclick="alert('Game coming soon!');"
+              onclick="games.ticTacToe.start()"
             >
               Tic-Tac-Toe
             </button>

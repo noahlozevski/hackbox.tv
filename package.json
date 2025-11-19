@@ -5,7 +5,9 @@
     "description": "hackbox.tv",
     "main": "index.js",
     "scripts": {
-        "build": "tsc",
+        "build": "npm run build:server && npm run build:client",
+        "build:server": "tsc",
+        "build:client": "tsc -p tsconfig.client.json",
         "start": "node dist/server.js",
         "dev": "ts-node src/server.ts",
         "test": "curl -f -s -o /dev/null -w '%{http_code}' https://hackbox.tv.lozev.ski/ | grep -q 200 && echo 'Site is online' || (echo 'Site is offline' && exit 1)",
