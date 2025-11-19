@@ -18,7 +18,11 @@ async function waitForRoom(page: Page, room: string) {
 }
 
 async function joinRoomExplicit(page: Page, room: string) {
-  await page.waitForFunction(() => typeof window.joinRoom === 'function');
+  await page.waitForFunction(
+    () =>
+      typeof window.joinRoom === 'function' &&
+      window.game?.ws?.readyState === WebSocket.OPEN,
+  );
   await page.evaluate((targetRoom) => {
     window.joinRoom?.(targetRoom);
   }, room);
