@@ -650,9 +650,26 @@ function setupShareButtons(shareUrl: string): void {
   if (navigator.share) {
     newShareButton.addEventListener('click', async () => {
       try {
+        const roomName = game.state.currentRoom ?? 'a hackbox.tv room';
+        const currentGameId = game.currentGame;
+        const gameLabel =
+          currentGameId && gameInfo[currentGameId]
+            ? gameInfo[currentGameId].name
+            : currentGameId
+              ? currentGameId
+              : null;
+
+        const shareTitle = gameLabel
+          ? `Join ${gameLabel} in ${roomName} on hackbox.tv`
+          : `Join ${roomName} on hackbox.tv`;
+
+        const shareText = gameLabel
+          ? `Room “${roomName}” is running ${gameLabel} on hackbox.tv. Drop in and help stress‑test the hackbox.`
+          : `Jump into ${roomName} on hackbox.tv to chat and spin up chaotic realtime games in your browser.`;
+
         await navigator.share({
-          title: 'Join my hackbox.tv room',
-          text: 'Join my game room on hackbox.tv!',
+          title: shareTitle,
+          text: shareText,
           url: shareUrl,
         });
       } catch (err) {
