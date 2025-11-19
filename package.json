@@ -8,6 +8,7 @@
         "build": "tsc",
         "start": "node dist/server.js",
         "dev": "ts-node src/server.ts",
+        "test": "curl -f -s -o /dev/null -w '%{http_code}' https://hackbox.tv.lozev.ski/ | grep -q 200 && echo 'Site is online' || (echo 'Site is offline' && exit 1)",
         "lint": "eslint . --ext .ts",
         "lint:fix": "eslint . --ext .ts --fix",
         "format": "prettier --write \"src/**/*.ts\""
