@@ -31,6 +31,8 @@
     <meta name="description" content="Chat and game website" />
 
     <title>Hackbox.tv.lozev.ski</title>
+    <!-- QR Code library -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
     <!-- Single client entrypoint; games are lazy-loaded from client.ts -->
     <script type="module" src="dist/site/src/client.js"></script>
     <style>
@@ -303,6 +305,11 @@
         <strong>Instructions:</strong> Select a room then click a game or chat
         with others. No data sent or received is stored on a server.
       </p>
+    </article>
+    <article id="qr-container" style="display: none; text-align: center;">
+      <h3>Share this room</h3>
+      <div id="qr-code" style="display: inline-block; margin: 1rem 0;"></div>
+      <p id="share-url" style="word-break: break-all; font-family: monospace; font-size: 0.9rem;"></p>
     </article>
     <div class="container">
       <div id="rooms">

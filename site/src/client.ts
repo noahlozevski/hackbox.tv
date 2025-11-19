@@ -13,6 +13,11 @@ declare global {
     game: GameFramework;
     games: GameRegistry;
     startGame: (gameId: string) => void;
+    // Optional global QRCode constructor injected by the page
+    QRCode?: new (
+      element: HTMLElement,
+      options: { text: string; width: number; height: number },
+    ) => unknown;
   }
 }
 
@@ -105,8 +110,9 @@ game.handlePlayersChanged = function (players: string[]): void {
   console.log('Players changed: ', players);
   game.players = players;
 
-  for (const [gameName, { canPlay }] of Object.entries(window.games)) {
-    if (!canPlay()) {
+  const games = window.games ?? {};
+  for (const [gameName, { canPlay }] of Object.entries(games)) {
+    if (typeof canPlay === 'function' && !canPlay()) {
       console.log('Cannot play game:', gameName);
       // Future: Auto-stop games when player count is insufficient
     }
@@ -122,16 +128,24 @@ game.onMessage = function (
 };
 
 window.game = game;
+if (!window.games) {
+  window.games = {};
+}
 
 connection.connect('/ws/');
 game.ws = connection.getWebSocket();
 
-// Try to rejoin the last room on reload/reconnect
+// Check URL for room parameter on initial load
+const urlParams = new URLSearchParams(window.location.search);
+const roomParam = urlParams.get('room');
+
+// Try to rejoin the last room on reload/reconnect, or join room from URL
 const persisted = connection.getPersistedState();
-if (persisted?.lastRoom) {
+const roomToJoin = roomParam || persisted?.lastRoom;
+if (roomToJoin) {
   // wait a tick so the socket has a chance to open
   window.setTimeout(() => {
-    joinRoom(persisted.lastRoom!);
+    joinRoom(roomToJoin);
   }, 200);
 }
 
@@ -262,6 +276,36 @@ function handleJoinedRoom(roomName: string, clients: string[]): void {
   if (clientList) clientList.innerHTML = '';
 
   updateClientList(clients);
+  updateQRCode(roomName);
+}
+
+function updateQRCode(roomName: string): void {
+  const qrContainer = document.getElementById('qr-container');
+  const qrCodeDiv = document.getElementById('qr-code');
+  const shareUrlEl = document.getElementById('share-url');
+
+  if (!qrContainer || !qrCodeDiv || !shareUrlEl) return;
+
+  // Build the shareable URL
+  const shareUrl = `${window.location.origin}${window.location.pathname}?room=${encodeURIComponent(roomName)}`;
+
+  // Show the container
+  qrContainer.style.display = 'block';
+
+  // Clear any existing QR code
+  qrCodeDiv.innerHTML = '';
+
+  // Generate new QR code
+  if (window.QRCode) {
+    new window.QRCode(qrCodeDiv, {
+      text: shareUrl,
+      width: 200,
+      height: 200,
+    });
+  }
+
+  // Update the URL text
+  shareUrlEl.textContent = shareUrl;
 }
 
 function handleNewClient(clientId: string): void {
