@@ -447,7 +447,7 @@ function updateGamesList(): void {
     const canPlay =
       gameEntry && typeof gameEntry.canPlay === 'function'
         ? gameEntry.canPlay()
-        : false;
+        : playerCount >= info.minPlayers;
 
     const item = document.createElement('div');
     item.className = 'game-item';
