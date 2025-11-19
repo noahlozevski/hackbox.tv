@@ -12,14 +12,14 @@ const GAME_DISPLAY_NAMES: Record<string, string> = {
 };
 
 const GAME_OG_IMAGES: Record<string, string> = {
-  connectFour: '/og_image.jpg',
-  marbleRace: '/og_image.jpg',
-  tiltPong: '/og_image.jpg',
-  arenaBumpers: '/og_image.jpg',
-  frogger: '/og_image.jpg',
-  ticTacToe: '/og_image.jpg',
-  rockPaperScissors: '/og_image.jpg',
-  lightcycle: '/og_image.jpg',
+  connectFour: '/connect-four-og.jpg',
+  marbleRace: '/marble-race-og.jpg',
+  tiltPong: '/tilt-pong-og.jpg',
+  arenaBumpers: '/arena-bumpers-og.jpg',
+  frogger: '/frogger-og.jpg',
+  ticTacToe: '/tic-tac-toe-og.jpg',
+  rockPaperScissors: '/rock-paper-scissors-og.jpg',
+  lightcycle: '/lightcycle-og.jpg',
 };
 
 export interface SharePageOptions {
