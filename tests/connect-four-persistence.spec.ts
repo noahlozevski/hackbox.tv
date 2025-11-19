@@ -101,6 +101,10 @@ test('Connect Four game state persists across refresh', async ({
   await expect(colOne).toBeVisible({ timeout: 15_000 });
   await colZero.click();
   await page.waitForTimeout(200);
+  await expect(page2.locator('#connect-four-status')).toContainText(
+    'Your turn',
+    { timeout: 15_000 },
+  );
   const page2ColOne = page2.locator('#game-container [data-col="1"]').first();
   await expect(page2ColOne).toBeVisible({ timeout: 15_000 });
   await page2ColOne.click();

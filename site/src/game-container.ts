@@ -90,7 +90,19 @@ export function showGameContainer(
   const closeButton = document.createElement('button');
   closeButton.id = CLOSE_BUTTON_ID;
   closeButton.textContent = 'Exit Game';
-  closeButton.onclick = () => onClose(true); // Pass true to clear state
+  closeButton.onclick = () => {
+    const currentId = window.game?.currentGame;
+    const currentEntry = currentId ? window.games?.[currentId] : null;
+    if (currentEntry?.stop) {
+      currentEntry.stop(true);
+    } else {
+      onClose(true);
+    }
+    if (currentId && window.game?.ws?.readyState === WebSocket.OPEN) {
+      window.game.sendMessage('stopGame', currentId);
+      window.game.sendMessage('clearGameState', currentId);
+    }
+  };
 
   header.appendChild(title);
   header.appendChild(closeButton);
