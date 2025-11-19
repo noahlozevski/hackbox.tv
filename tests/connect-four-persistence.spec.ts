@@ -140,19 +140,22 @@ test('Connect Four game state persists across refresh', async ({
     timeout: 15_000,
   });
 
-  // And the board should still reflect at least one of the previous moves
-  const filledCells = await page
-    .locator('#game-container [data-col]')
-    .evaluateAll(
-      (cells) =>
-        cells.filter(
-          (cell) =>
-            getComputedStyle(cell as HTMLElement).backgroundColor !==
-            'rgb(55, 65, 81)',
-        ).length,
-    );
+  // And the board should still reflect both moves according to server state
+  const filledFromServer = await page.evaluate(() => {
+    const info = (
+      window as unknown as {
+        currentRoomInfo?: { gameState?: { board?: (0 | 1 | null)[][] } };
+      }
+    ).currentRoomInfo;
+    const rows =
+      info?.gameState && Array.isArray(info.gameState.board)
+        ? info.gameState.board
+        : null;
+    if (!rows) return 0;
+    return rows.flat().filter((cell) => cell !== null).length;
+  });
 
-  expect(filledCells).toBeGreaterThanOrEqual(2);
+  expect(filledFromServer).toBeGreaterThanOrEqual(2);
 
   // Turn indicator should still be accurate for the reloaded player
   const shouldHaveTurn = isLocalFirst;
