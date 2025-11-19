@@ -14,6 +14,12 @@ sudo rm -rf "$WEB_DIR"/*
 echo "Copying built client files..."
 sudo cp -R "$APP_DIR/site/dist/site/"* "$WEB_DIR/"
 
+# Copy shared directory (built separately by TypeScript)
+if [ -d "$APP_DIR/site/dist/shared" ]; then
+  echo "Copying shared files..."
+  sudo cp -R "$APP_DIR/site/dist/shared" "$WEB_DIR/"
+fi
+
 # Copy any static HTML/CSS files from site root if they exist
 if [ -f "$APP_DIR/site/index.html" ]; then
   sudo cp "$APP_DIR/site/"*.html "$WEB_DIR/" 2>/dev/null || true
