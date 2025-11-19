@@ -34,7 +34,9 @@
     <script type="module" src="dist/types.js"></script>
     <script type="module" src="dist/client.js"></script>
     <script src="connect-four.js" defer></script>
+    <script src="frogger.js" defer></script>
     <script type="module" src="dist/tic-tac-toe.js"></script>
+    <script type="module" src="dist/rock-paper-scissors.js"></script>
     <style>
       /* Reset and base styles */
       * {
@@ -329,11 +331,20 @@
             <button id="connect-four" onclick="games.connectFour.start()">
               Connect Four
             </button>
+            <button id="frogger" onclick="games.frogger.start()">
+              Frogger
+            </button>
             <button
               id="tic-tac-toe"
               onclick="games.ticTacToe.start()"
             >
               Tic-Tac-Toe
+            </button>
+            <button
+              id="rock-paper-scissors"
+              onclick="games.rockPaperScissors.start()"
+            >
+              Rock Paper Scissors
             </button>
           </div>
           <h3>Clients in Room:</h3>
