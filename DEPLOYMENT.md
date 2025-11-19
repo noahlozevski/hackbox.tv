@@ -59,6 +59,7 @@ ssh <server> "cd <app-directory> && git pull && ./deploy.sh"
 
 - **Backend**: Node.js/TypeScript WebSocket server
 - **Frontend**: Static HTML/CSS/JS
+- **Share Pages**: Lightweight Node HTTP server that renders room/game-specific Open Graph and Twitter metadata at `/share/:room/:game?`
 - **Build System**: TypeScript compiler (`npm run build`)
 - **Process Manager**: PM2 (or similar)
 - **Deployment Script**: `./deploy.sh` on the server handles build and restart
@@ -69,13 +70,23 @@ The `deploy.sh` script on the server typically:
 3. Deploys static files
 4. Restarts the application
 
+The share-page HTTP server is started from the same Node process as the WebSocket server (see `src/server.ts`) and listens on port `3001`. Nginx proxies `/share/` requests to this port.
+
 ## Testing After Deployment
 
 ### Verify Deployment
 ```bash
-# Run the automated site check
-npm run test
+# Run the automated checks locally
+npm run lint
+npm test
+
+# From the server (run inside the app directory)
+npm run test:e2e
 ```
+
+This will validate:
+- WebSocket connectivity against production (`src/connection.e2e.test.ts`)
+- Room/game-specific Open Graph share pages served from production (`src/share-page.e2e.test.ts`)
 
 ### Quick Mobile Test
 After deployment, open the site on an actual phone to verify:
@@ -100,6 +111,24 @@ pm2 restart <app-name>
 # Check web server status
 sudo systemctl status nginx
 ```
+
+### Nginx Share Route (Reference)
+
+The production Nginx config for `hackbox.tv.lozev.ski` includes:
+
+```nginx
+location /share/ {
+    proxy_pass http://localhost:3001;
+    proxy_set_header Host $host;
+}
+```
+
+This forwards `/share/:room/:game?` URLs to the Node share-page server so social crawlers (Twitter/X, iMessage, etc.) see room/game-specific OG/Twitter tags.
+
+### Environment Variables
+
+- `HACKBOX_PUBLIC_ORIGIN` (server-side, optional): Controls the absolute origin used when generating share pages. Defaults to `https://hackbox.tv.lozev.ski`.
+- `HACKBOX_SHARE_E2E_ORIGIN`, `HACKBOX_SHARE_E2E_ROOM`, `HACKBOX_SHARE_E2E_GAME` (optional): Used only by `src/share-page.e2e.test.ts` to override the default production URL under test, if needed.
 
 ---
 

@@ -1,9 +1,15 @@
 import { describe, it, expect } from 'vitest';
 import * as https from 'https';
 
-const SHARE_URL =
-  process.env.HACKBOX_SHARE_E2E_URL ??
-  'https://hackbox.tv.lozev.ski/share/E2eRoom/ticTacToe';
+const SHARE_ORIGIN =
+  process.env.HACKBOX_SHARE_E2E_ORIGIN ?? 'https://hackbox.tv.lozev.ski';
+const SHARE_ROOM = process.env.HACKBOX_SHARE_E2E_ROOM ?? 'E2eRoom';
+const SHARE_GAME = process.env.HACKBOX_SHARE_E2E_GAME ?? 'ticTacToe';
+
+const ROOM_ONLY_URL = `${SHARE_ORIGIN}/share/${encodeURIComponent(SHARE_ROOM)}`;
+const ROOM_AND_GAME_URL = `${SHARE_ORIGIN}/share/${encodeURIComponent(
+  SHARE_ROOM,
+)}/${encodeURIComponent(SHARE_GAME)}`;
 
 function fetchHtml(url: string): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -29,15 +35,29 @@ function fetchHtml(url: string): Promise<string> {
 }
 
 describe('Prod Share Page E2E', () => {
-  it('serves room/game-specific OG metadata for share URL', async () => {
-    const html = await fetchHtml(SHARE_URL);
+  it('serves room-only OG metadata for share URL', async () => {
+    const html = await fetchHtml(ROOM_ONLY_URL);
 
     expect(html).toContain('property="og:title"');
     expect(html).toContain('name="twitter:card"');
     expect(html).toContain('summary_large_image');
-    expect(html).toContain('Join Tic-Tac-Toe in E2eRoom on hackbox.tv');
+    expect(html).toContain(`Join room ${SHARE_ROOM} on hackbox.tv`);
     expect(html).toContain(
-      'https://hackbox.tv.lozev.ski/?room=E2eRoom&amp;game=ticTacToe',
+      `${SHARE_ORIGIN}/?room=${encodeURIComponent(SHARE_ROOM)}`,
+    );
+  }, 30_000);
+
+  it('serves room/game-specific OG metadata for share URL', async () => {
+    const html = await fetchHtml(ROOM_AND_GAME_URL);
+
+    expect(html).toContain('property="og:title"');
+    expect(html).toContain('name="twitter:card"');
+    expect(html).toContain('summary_large_image');
+    expect(html).toContain(`Join Tic-Tac-Toe in ${SHARE_ROOM} on hackbox.tv`);
+    expect(html).toContain(
+      `${SHARE_ORIGIN}/?room=${encodeURIComponent(
+        SHARE_ROOM,
+      )}&amp;game=${encodeURIComponent(SHARE_GAME)}`,
     );
   }, 30_000);
 });
