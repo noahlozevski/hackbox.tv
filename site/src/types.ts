@@ -9,7 +9,11 @@ import type { PlayerInfo } from './shared/types.js';
 
 // Client-specific game framework types
 export type PlayersChangedCallback = (players: PlayerInfo[]) => void;
-export type MessageCallback = (playerId: string, event: string, payload: unknown) => void;
+export type MessageCallback = (
+  playerId: string,
+  event: string,
+  payload: unknown,
+) => void;
 export type GameStateCallback = (state: unknown) => void;
 
 // Game state interface
@@ -57,6 +61,11 @@ export interface Game {
    * Stop/cleanup the game
    */
   stop: () => void;
+
+  /**
+   * Original stop method before wrapping (used internally for sync)
+   */
+  _originalStop?: () => void;
 }
 
 // Game registry

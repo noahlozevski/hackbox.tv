@@ -119,6 +119,23 @@ window.startGame = async (
   }
 
   game.currentGame = gameId;
+
+  // Store reference to original stop if not already wrapped
+  if (!gameEntry._originalStop) {
+    gameEntry._originalStop = gameEntry.stop;
+    // Wrap the stop method to broadcast stop event
+    gameEntry.stop = function () {
+      gameEntry._originalStop!.call(this);
+      game.currentGame = null;
+      // Broadcast to other players so they also stop the game
+      game.sendMessage('stopGame', gameId);
+      // Update QR code to remove game parameter
+      if (game.state.currentRoom) {
+        updateQRCode(game.state.currentRoom);
+      }
+    };
+  }
+
   gameEntry.start();
 
   // Update QR code to include the game parameter
@@ -265,6 +282,22 @@ function handleServerMessage(message: ServerMessage): void {
       } else if (event === 'startGame') {
         // Start the game for all players in the room
         window.startGame(payload as string, false);
+      } else if (event === 'stopGame') {
+        // Stop the game for all players in the room
+        const gameId = payload as string;
+        const gameEntry = window.games?.[gameId];
+        if (gameEntry && game.currentGame === gameId) {
+          // Call the original stop method directly to avoid re-broadcasting
+          if (gameEntry._originalStop) {
+            gameEntry._originalStop.call(gameEntry);
+          } else {
+            gameEntry.stop();
+          }
+          game.currentGame = null;
+          if (game.state.currentRoom) {
+            updateQRCode(game.state.currentRoom);
+          }
+        }
       }
       break;
     }
