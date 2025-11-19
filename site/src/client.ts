@@ -18,7 +18,11 @@ declare global {
   interface Window {
     game: GameFramework;
     games: GameRegistry;
-    startGame: (gameId: string, broadcastToOthers?: boolean) => Promise<void>;
+    startGame: (
+      gameId: string,
+      broadcastToOthers?: boolean,
+      savedState?: unknown,
+    ) => Promise<void>;
     // Optional global QRCode constructor injected by the page
     QRCode?: new (
       element: HTMLElement,
@@ -95,6 +99,7 @@ const gameModuleLoaders: Record<string, () => Promise<unknown>> = {
 window.startGame = async (
   gameId: string,
   broadcastToOthers = true,
+  savedState?: unknown,
 ): Promise<void> => {
   let gameEntry: Game | undefined = window.games?.[gameId];
 
@@ -123,12 +128,20 @@ window.startGame = async (
   // Store reference to original stop if not already wrapped
   if (!gameEntry._originalStop) {
     gameEntry._originalStop = gameEntry.stop;
-    // Wrap the stop method to broadcast stop event
+    // Wrap the stop method to broadcast stop event and save state
     gameEntry.stop = function () {
+      // Save state first, then stop game
+      const savedState = gameEntry.saveState ? gameEntry.saveState() : null;
+
       gameEntry._originalStop!.call(this);
       game.currentGame = null;
-      // Broadcast to other players so they also stop the game
+
+      // Send stop message first, then save state (if any)
       game.sendMessage('stopGame', gameId);
+      if (savedState) {
+        game.sendMessage('saveGameState', { gameId, state: savedState });
+      }
+
       // Update QR code to remove game parameter
       if (game.state.currentRoom) {
         updateQRCode(game.state.currentRoom);
@@ -137,6 +150,11 @@ window.startGame = async (
   }
 
   gameEntry.start();
+
+  // Load saved state if provided (and game supports it)
+  if (savedState && gameEntry.loadState) {
+    gameEntry.loadState(savedState);
+  }
 
   // Update QR code to include the game parameter
   if (game.state.currentRoom) {
@@ -218,7 +236,7 @@ function handleServerMessage(message: ServerMessage): void {
       updatePlayerNameDisplay(game);
       break;
     case 'roomsList':
-      // message.data is Array<{ name: string; clients: Array<{ id: string; name: string }>; activeGame?: string | null }>
+      // message.data is Array<{ name: string; clients: Array<{ id: string; name: string }>; activeGame?: string | null; gameState?: unknown; gameTimeout?: number | null }>
       handleRoomsList(message.data);
       // Update the client list if we are in a room
       if (game.state.currentRoom) {
@@ -227,8 +245,16 @@ function handleServerMessage(message: ServerMessage): void {
             name: string;
             clients: Array<{ id: string; name: string }>;
             activeGame?: string | null;
+            gameState?: unknown;
+            gameTimeout?: number | null;
           }) => room.name === game.state.currentRoom,
         );
+
+        // Store room info for timeout display
+        (
+          window as unknown as { currentRoomInfo?: typeof room }
+        ).currentRoomInfo = room;
+
         if (room && game.handlePlayersChanged) {
           game.handlePlayersChanged(
             room.clients.sort((a, b) => a.id.localeCompare(b.id)),
@@ -237,19 +263,31 @@ function handleServerMessage(message: ServerMessage): void {
         // Sync with server's active game state
         if (room && room.activeGame !== game.currentGame) {
           if (room.activeGame && !game.currentGame) {
-            // Server says a game is active, but we don't have one - start it
-            window.startGame(room.activeGame, false);
+            // Server says a game is active, but we don't have one - start it with saved state
+            try {
+              window.startGame(room.activeGame, false, room.gameState);
+            } catch (error) {
+              console.error('Error auto-starting game:', error);
+              // Reset state on error
+              game.currentGame = null;
+            }
           } else if (!room.activeGame && game.currentGame) {
             // Server says no game is active, but we have one - stop it
-            const gameEntry = window.games?.[game.currentGame];
-            if (gameEntry?._originalStop) {
-              gameEntry._originalStop.call(gameEntry);
-            } else if (gameEntry) {
-              gameEntry.stop();
-            }
-            game.currentGame = null;
-            if (game.state.currentRoom) {
-              updateQRCode(game.state.currentRoom);
+            try {
+              const gameEntry = window.games?.[game.currentGame];
+              if (gameEntry?._originalStop) {
+                gameEntry._originalStop.call(gameEntry);
+              } else if (gameEntry) {
+                gameEntry.stop();
+              }
+              game.currentGame = null;
+              if (game.state.currentRoom) {
+                updateQRCode(game.state.currentRoom);
+              }
+            } catch (error) {
+              console.error('Error auto-stopping game:', error);
+              // Force reset state
+              game.currentGame = null;
             }
           }
         }
@@ -482,6 +520,18 @@ const gameInfo: Record<
   lightcycle: { name: 'Lightcycles', minPlayers: 2 },
 };
 
+function formatTimeRemaining(expiresAt: number): string {
+  const now = Date.now();
+  const remaining = Math.max(0, expiresAt - now);
+  const minutes = Math.floor(remaining / 60000);
+  const seconds = Math.floor((remaining % 60000) / 1000);
+
+  if (minutes > 0) {
+    return `State expires in ${minutes}m ${seconds}s`;
+  }
+  return `State expires in ${seconds}s`;
+}
+
 function updateGamesList(): void {
   const gameListEl = document.getElementById('game-list');
   if (!gameListEl) return;
@@ -490,6 +540,19 @@ function updateGamesList(): void {
 
   const games = window.games ?? {};
   const playerCount = game.players.length;
+
+  // Get current room info for timeout display
+  const currentRoomInfo = game.state.currentRoom
+    ? (
+        window as unknown as {
+          currentRoomInfo?: {
+            gameState?: unknown;
+            gameTimeout?: number | null;
+            activeGame?: string | null;
+          };
+        }
+      ).currentRoomInfo
+    : null;
 
   Object.entries(gameInfo).forEach(([gameId, info]) => {
     const gameEntry = games[gameId];
@@ -507,6 +570,16 @@ function updateGamesList(): void {
       item.classList.add('disabled');
     }
 
+    const contentWrapper = document.createElement('div');
+    contentWrapper.style.display = 'flex';
+    contentWrapper.style.flexDirection = 'column';
+    contentWrapper.style.flex = '1';
+
+    const topRow = document.createElement('div');
+    topRow.style.display = 'flex';
+    topRow.style.justifyContent = 'space-between';
+    topRow.style.alignItems = 'center';
+
     const nameSpan = document.createElement('span');
     nameSpan.className = 'game-name';
     nameSpan.textContent = info.name;
@@ -520,25 +593,61 @@ function updateGamesList(): void {
     } else {
       playersSpan.classList.add('waiting');
       const needed = info.minPlayers - playerCount;
-      if (needed === 1) {
-        playersSpan.textContent = `Need ${needed} more`;
-      } else {
-        playersSpan.textContent = `Need ${needed} more`;
-      }
+      playersSpan.textContent = `Need ${needed} more`;
     }
 
-    item.appendChild(nameSpan);
-    item.appendChild(playersSpan);
+    topRow.appendChild(nameSpan);
+    topRow.appendChild(playersSpan);
+    contentWrapper.appendChild(topRow);
+
+    // Show timeout if this game has saved state
+    if (
+      currentRoomInfo?.gameState &&
+      currentRoomInfo.gameTimeout &&
+      !currentRoomInfo.activeGame
+    ) {
+      const timeoutSpan = document.createElement('div');
+      timeoutSpan.className = 'game-timeout';
+      timeoutSpan.textContent = formatTimeRemaining(
+        currentRoomInfo.gameTimeout,
+      );
+      contentWrapper.appendChild(timeoutSpan);
+    }
+
+    item.appendChild(contentWrapper);
 
     if (canPlay) {
       item.addEventListener('click', () => {
-        window.startGame(gameId);
+        try {
+          window.startGame(gameId);
+        } catch (error) {
+          console.error('Error starting game:', error);
+          alert('Failed to start game. Please refresh and try again.');
+          // Try to reset client state
+          if (game.currentGame) {
+            const gameEntry = window.games?.[game.currentGame];
+            if (gameEntry?._originalStop) {
+              gameEntry._originalStop.call(gameEntry);
+            }
+            game.currentGame = null;
+          }
+        }
       });
     }
 
     gameListEl.appendChild(item);
   });
 }
+
+// Update countdown timers every second
+setInterval(() => {
+  const roomInfo = (
+    window as unknown as { currentRoomInfo?: { gameTimeout?: number | null } }
+  ).currentRoomInfo;
+  if (game.state.currentRoom && roomInfo?.gameTimeout) {
+    updateGamesList();
+  }
+}, 1000);
 
 function handleNewClient(clientId: string, clientName: string): void {
   addClientToList(clientId, clientName);

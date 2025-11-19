@@ -362,8 +362,7 @@ function start(): void {
 function stop(): void {
   if (!state) return;
 
-  const { host, styleEl, animationId, unsubscribe, resizeHandler } =
-    state;
+  const { host, styleEl, animationId, unsubscribe, resizeHandler } = state;
   state.running = false;
   if (animationId) cancelAnimationFrame(animationId);
   if (unsubscribe) unsubscribe();
@@ -734,10 +733,49 @@ function continueGame(): void {
   hideOverlay();
 }
 
+function saveState(): unknown {
+  if (!state) return null;
+
+  return {
+    frog: {
+      x: state.frog.x,
+      y: state.frog.y,
+      lives: state.frog.lives,
+      score: state.frog.score,
+    },
+    level: state.level,
+    highestRow: state.highestRow,
+  };
+}
+
+function loadState(savedState: unknown): void {
+  if (!state || !savedState) return;
+
+  const data = savedState as {
+    frog: { x: number; y: number; lives: number; score: number };
+    level: number;
+    highestRow: number;
+  };
+
+  // Restore frog state
+  state.frog.x = data.frog.x;
+  state.frog.y = data.frog.y;
+  state.frog.lives = data.frog.lives;
+  state.frog.score = data.frog.score;
+  state.level = data.level;
+  state.highestRow = data.highestRow;
+
+  // Update UI
+  updateHud();
+  draw();
+}
+
 const froggerGame: Game = {
   canPlay,
   start,
   stop,
+  saveState,
+  loadState,
 };
 
 if (!window.games) {

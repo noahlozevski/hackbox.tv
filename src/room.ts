@@ -5,11 +5,35 @@ export class Room {
   public name: string;
   public clients: Set<Client>;
   public activeGame: string | null;
+  public gameState: unknown;
+  public gameTimeout: number | null; // Timestamp when game session expires
+  private gameTimeoutHandle: NodeJS.Timeout | null;
 
   constructor(name: string) {
     this.name = name;
     this.clients = new Set();
     this.activeGame = null;
+    this.gameState = null;
+    this.gameTimeout = null;
+    this.gameTimeoutHandle = null;
+  }
+
+  clearGameState(): void {
+    this.activeGame = null;
+    this.gameState = null;
+    this.gameTimeout = null;
+    if (this.gameTimeoutHandle) {
+      clearTimeout(this.gameTimeoutHandle);
+      this.gameTimeoutHandle = null;
+    }
+  }
+
+  setGameTimeout(callback: () => void, timeoutMs: number): void {
+    if (this.gameTimeoutHandle) {
+      clearTimeout(this.gameTimeoutHandle);
+    }
+    this.gameTimeout = Date.now() + timeoutMs;
+    this.gameTimeoutHandle = setTimeout(callback, timeoutMs);
   }
 
   addClient(client: Client) {

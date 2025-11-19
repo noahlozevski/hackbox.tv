@@ -85,6 +85,8 @@ function sendAvailableRooms(client: Client) {
     name: room.name,
     clients: room.getClientList(),
     activeGame: room.activeGame,
+    gameState: room.gameState,
+    gameTimeout: room.gameTimeout,
   }));
 
   MessageBuilder.sendRoomsList(client, roomsInfo);
@@ -212,12 +214,36 @@ function handleClientMessage(client: Client, event: string, payload: unknown) {
   if (event === 'startGame') {
     const gameId = payload as string;
     client.room.activeGame = gameId;
+    // Clear any existing timeout when starting a game
+    client.room.clearGameState();
+    client.room.activeGame = gameId; // Restore activeGame after clear
     console.log(`Game "${gameId}" started in room ${client.room.name}`);
   } else if (event === 'stopGame') {
     const gameId = payload as string;
     if (client.room.activeGame === gameId) {
+      // Set a timeout to clear state after 30 minutes of inactivity
+      client.room.setGameTimeout(
+        () => {
+          console.log(`Game timeout reached for room ${client.room?.name}`);
+          client.room?.clearGameState();
+        },
+        30 * 60 * 1000,
+      ); // 30 minutes
+
       client.room.activeGame = null;
-      console.log(`Game "${gameId}" stopped in room ${client.room.name}`);
+      console.log(
+        `Game "${gameId}" stopped in room ${client.room.name}, state will be cleared in 30 minutes`,
+      );
+    }
+  } else if (event === 'saveGameState') {
+    // Client is saving game state (happens during stop)
+    const data = payload as { gameId: string; state: unknown };
+    // Only save if we recently had this game active or still have it active
+    if (client.room.activeGame === data.gameId || client.room.gameState) {
+      client.room.gameState = data.state;
+      console.log(
+        `Game state saved for "${data.gameId}" in room ${client.room.name}`,
+      );
     }
   }
 

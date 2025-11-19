@@ -63,6 +63,18 @@ export interface Game {
   stop: () => void;
 
   /**
+   * Save the current game state (optional - for persistence)
+   * Should return a serializable object representing the game state
+   */
+  saveState?: () => unknown;
+
+  /**
+   * Load a previously saved game state (optional - for persistence)
+   * Should restore the game to the saved state
+   */
+  loadState?: (state: unknown) => void;
+
+  /**
    * Original stop method before wrapping (used internally for sync)
    */
   _originalStop?: () => void;

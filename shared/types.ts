@@ -23,6 +23,8 @@ export interface RoomInfo {
   name: string;
   clients: PlayerInfo[];
   activeGame?: string | null;
+  gameState?: unknown; // Serialized game state for persistence
+  gameTimeout?: number | null; // Timestamp (ms since epoch) when game session/state expires
 }
 
 // ============================================================================

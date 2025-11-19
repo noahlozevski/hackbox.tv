@@ -275,6 +275,24 @@
         color: #e53e3e;
       }
 
+      /* Game timeout countdown */
+      .game-timeout {
+        font-size: 0.75rem;
+        color: #f6ad55;
+        margin-top: 0.25rem;
+        font-weight: 500;
+      }
+
+      .game-timeout::before {
+        content: '⏱ ';
+        animation: pulse 2s ease-in-out infinite;
+      }
+
+      @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+      }
+
       /* QR Code section */
       #qr-container {
         background: #f8f9fa;
