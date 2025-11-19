@@ -10,6 +10,11 @@ APP_DIR="/home/noahlozevski/app"
 # Ensure we're in the app directory
 cd "$APP_DIR"
 
+# Kill any stray node processes that might be running old code
+echo "Cleaning up old processes..."
+pkill -f "node.*dist/server.js" || true
+sleep 2
+
 # Install/update dependencies
 echo "Installing dependencies..."
 npm install
@@ -22,6 +27,17 @@ rm -rf dist site-dist
 echo "Building application..."
 npm run build
 
+# Verify the build output exists
+if [ ! -f "dist/src/server.js" ]; then
+  echo "ERROR: Server build failed - dist/src/server.js not found"
+  exit 1
+fi
+
+if [ ! -d "site/dist/site/src" ]; then
+  echo "ERROR: Client build failed - site/dist/site/src not found"
+  exit 1
+fi
+
 # Run end-to-end connection check against production WebSocket
 echo "Running end-to-end connection test..."
 npm run test:e2e || echo "Warning: E2E tests failed, but continuing deployment..."
@@ -30,9 +46,15 @@ npm run test:e2e || echo "Warning: E2E tests failed, but continuing deployment..
 echo "Deploying static files..."
 ./deploy_static.sh
 
-# Restart PM2 process
-echo "Restarting application..."
-pm2 restart hackbox-app
+# Stop PM2 app completely, then start it fresh (not restart)
+echo "Stopping application..."
+pm2 stop hackbox-app || true
+
+echo "Starting application..."
+pm2 start dist/src/server.js --name hackbox-app || pm2 restart hackbox-app
+
+# Save PM2 configuration
+pm2 save
 
 echo ""
 echo "=== Deployment Complete ==="
