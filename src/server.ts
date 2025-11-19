@@ -168,11 +168,27 @@ setInterval(() => {
 function sendAvailableRooms(client: Client) {
   const roomsInfo = Array.from(rooms.values())
     .filter((room) => {
-      if (client.room && room.name === client.room.name) {
+      const name = room.name;
+
+      // Always show the room the client is currently in
+      if (client.room && name === client.room.name) {
         return true;
       }
+
       // Hide obviously test/e2e rooms from casual customers
-      return !/^e2e-|^test-/.test(room.name);
+      if (/^e2e-|^test-/.test(name)) {
+        return false;
+      }
+
+      const isDefaultRoom = DEFAULT_ROOMS.includes(name);
+      const hasClients = room.getClientList().length > 0;
+
+      // Hide empty non-default rooms so old ad-hoc rooms (like "Room2") don't clutter the lobby
+      if (!isDefaultRoom && !hasClients) {
+        return false;
+      }
+
+      return true;
     })
     .map((room) => ({
       name: room.name,
