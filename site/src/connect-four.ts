@@ -47,31 +47,17 @@ function canPlay(): boolean {
   return window.game.players.length >= 2;
 }
 
-function derivePlayerOrder(
-  players: PlayerInfo[],
-  preferredId: string | null,
-): string[] {
-  const order: string[] = [];
-  const roster = [...players];
-  if (preferredId) {
-    const preferred = roster.find((player) => player.id === preferredId);
-    if (preferred) {
-      order.push(preferred.id);
-    }
-  }
-  for (const player of roster) {
-    if (order.length >= 2) break;
-    if (!order.includes(player.id)) {
-      order.push(player.id);
-    }
-  }
-  return order.slice(0, 2);
+function derivePlayerOrder(players: PlayerInfo[]): string[] {
+  return [...players]
+    .sort((a, b) => a.id.localeCompare(b.id))
+    .slice(0, 2)
+    .map((player) => player.id);
 }
 
 function resolvePlayerOrder(savedOrder?: Array<string | null>): string[] {
   const players = window.game.players;
   if (!savedOrder || savedOrder.length === 0) {
-    return derivePlayerOrder(players, window.game.state.playerId);
+    return derivePlayerOrder(players);
   }
 
   const resolved = savedOrder.slice(0, 2).map((id) => id ?? null);
@@ -103,8 +89,7 @@ function resolvePlayerOrder(savedOrder?: Array<string | null>): string[] {
     (id): id is string => typeof id === 'string',
   );
   if (filtered.length < 2) {
-    const fallback = derivePlayerOrder(players, window.game.state.playerId);
-    return fallback;
+    return derivePlayerOrder(players);
   }
   return filtered.slice(0, 2);
 }
@@ -151,12 +136,11 @@ function start(): void {
 
   unsubscribe = window.game.subscribeToMessages(handleMessage);
   updateStatus();
-  syncGameStateWithServer();
 }
 
 function initializeState(): void {
   const playerId = window.game.state.playerId;
-  const playerOrder = derivePlayerOrder(window.game.players, playerId);
+  const playerOrder = derivePlayerOrder(window.game.players);
 
   state = {
     playerId,
@@ -563,10 +547,7 @@ function applySerializedState(savedState: unknown): void {
   const resolvedOrder = resolvePlayerOrder(savedOrder);
   currentState.playerOrder = resolvedOrder;
   if (currentState.playerOrder.length < 2) {
-    currentState.playerOrder = derivePlayerOrder(
-      window.game.players,
-      currentState.playerId,
-    );
+    currentState.playerOrder = derivePlayerOrder(window.game.players);
   }
 
   currentState.board = data.board.map((row) =>

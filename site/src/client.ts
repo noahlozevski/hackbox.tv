@@ -172,6 +172,19 @@ window.startGame = async (
   // Broadcast to other players so they also start the game
   if (broadcastToOthers) {
     game.sendMessage('startGame', gameId);
+    if (typeof gameEntry.saveState === 'function') {
+      try {
+        const initialState = gameEntry.saveState();
+        if (initialState) {
+          game.sendMessage('saveGameState', {
+            gameId,
+            state: initialState,
+          });
+        }
+      } catch (error) {
+        console.error('Error saving initial game state:', error);
+      }
+    }
   }
 };
 
@@ -199,6 +212,25 @@ game.onMessage = function (
   payload: unknown,
 ): void {
   console.log(`Received event [${event}] from player ${player}:`, payload);
+
+  if (event === 'stopGame') {
+    const stoppedGameId = payload as string;
+    const targetGameId = game.currentGame ?? stoppedGameId;
+    if (!targetGameId) {
+      return;
+    }
+
+    const gameEntry = window.games?.[targetGameId];
+    if (gameEntry?._originalStop) {
+      gameEntry._originalStop.call(gameEntry);
+    } else if (gameEntry) {
+      gameEntry.stop();
+    }
+    game.currentGame = null;
+    if (game.state.currentRoom) {
+      updateQRCode(game.state.currentRoom);
+    }
+  }
 };
 
 window.game = game;
