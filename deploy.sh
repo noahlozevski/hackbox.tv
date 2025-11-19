@@ -18,6 +18,10 @@ npm install
 echo "Building application..."
 npm run build
 
+# Run end-to-end connection check against production WebSocket
+echo "Running end-to-end connection test..."
+npm run test:e2e
+
 # Deploy static files
 echo "Deploying static files..."
 ./deploy_static.sh

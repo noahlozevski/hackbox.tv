@@ -80,6 +80,9 @@ npm run dev
 # Run tests
 npm test
 
+# Run opt-in E2E test against production WebSocket
+npm run test:e2e   # uses HACKBOX_E2E=1 and hits wss://hackbox.tv.lozev.ski/ws/
+
 # Run tests in watch mode
 npm run test:watch
 
