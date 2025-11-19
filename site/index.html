@@ -31,17 +31,8 @@
     <meta name="description" content="Chat and game website" />
 
     <title>Hackbox.tv.lozev.ski</title>
-    <script type="module" src="dist/types.js"></script>
-    <script type="module" src="dist/client.js"></script>
-    <script type="module" src="dist/site/src/connect-four.js"></script>
-    <script type="module" src="dist/site/src/tic-tac-toe.js"></script>
-    <script type="module" src="dist/site/src/rock-paper-scissors.js"></script>
-    <script type="module" src="dist/site/src/frogger.js"></script>
-    <script type="module" src="dist/site/src/arena-bumpers.js"></script>
-    <script type="module" src="dist/site/src/marble-race.js"></script>
-    <script type="module" src="dist/site/src/tilt-pong.js"></script>
-    <script type="module" src="dist/site/src/top-down-tag.js"></script>
-    <script type="module" src="dist/site/src/lightcycle.js"></script>
+    <!-- Single client entrypoint; games are lazy-loaded from client.ts -->
+    <script type="module" src="dist/site/src/client.js"></script>
     <style>
       /* Reset and base styles */
       * {
@@ -333,36 +324,36 @@
         <div id="clients">
           <div class="games">
             <div>Available Games:</div>
-            <button id="connect-four" onclick="games.connectFour.start()">
+            <button id="connect-four" onclick="startGame('connectFour')">
               Connect Four
             </button>
-            <button id="marble-race" onclick="games.marbleRace.start()">
+            <button id="marble-race" onclick="startGame('marbleRace')">
               Marble Race
             </button>
-            <button id="tilt-pong" onclick="games.tiltPong.start()">
+            <button id="tilt-pong" onclick="startGame('tiltPong')">
               Tilt Pong
             </button>
-            <button id="arena-bumpers" onclick="games.arenaBumpers.start()">
+            <button id="arena-bumpers" onclick="startGame('arenaBumpers')">
               Arena Bumpers
             </button>
-            <button id="frogger" onclick="games.frogger.start()">
+            <button id="frogger" onclick="startGame('frogger')">
               Frogger
             </button>
             <button
               id="tic-tac-toe"
-              onclick="games.ticTacToe.start()"
+              onclick="startGame('ticTacToe')"
             >
               Tic-Tac-Toe
             </button>
             <button
               id="rock-paper-scissors"
-              onclick="games.rockPaperScissors.start()"
+              onclick="startGame('rockPaperScissors')"
             >
               Rock Paper Scissors
             </button>
             <button
               id="lightcycle"
-              onclick="games.lightcycle.start()"
+              onclick="startGame('lightcycle')"
             >
               Lightcycles
             </button>

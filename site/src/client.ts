@@ -1,11 +1,18 @@
-import type { GameFramework, GameRegistry, ServerMessage } from './types.js';
+import type {
+  GameFramework,
+  GameRegistry,
+  ServerMessage,
+  Game,
+} from './types.js';
 import * as MessageBuilder from './message-builder.js';
 import { ConnectionManager } from './connection-manager.js';
+import { normalizeJoinedRoomData } from './shared/protocol-helpers.js';
 
 declare global {
   interface Window {
     game: GameFramework;
     games: GameRegistry;
+    startGame: (gameId: string) => void;
   }
 }
 
@@ -54,6 +61,43 @@ const game: GameFramework = {
   sendGameAction(gameType: string, action: unknown): void {
     MessageBuilder.sendGameAction(this.ws, gameType, action);
   },
+};
+
+const gameModuleLoaders: Record<string, () => Promise<unknown>> = {
+  connectFour: () => import('./connect-four.js'),
+  marbleRace: () => import('./marble-race.js'),
+  tiltPong: () => import('./tilt-pong.js'),
+  arenaBumpers: () => import('./arena-bumpers.js'),
+  frogger: () => import('./frogger.js'),
+  ticTacToe: () => import('./tic-tac-toe.js'),
+  rockPaperScissors: () => import('./rock-paper-scissors.js'),
+  lightcycle: () => import('./lightcycle.js'),
+};
+
+window.startGame = async (gameId: string): Promise<void> => {
+  let gameEntry: Game | undefined = window.games?.[gameId];
+
+  if (!gameEntry) {
+    const loader = gameModuleLoaders[gameId];
+    if (!loader) {
+      console.warn('Unknown game id:', gameId);
+      return;
+    }
+    await loader();
+    gameEntry = window.games?.[gameId];
+  }
+
+  if (!gameEntry) {
+    console.warn('Game not registered after loading module:', gameId);
+    return;
+  }
+
+  if (!gameEntry.canPlay()) {
+    alert('Not enough players to start this game.');
+    return;
+  }
+
+  gameEntry.start();
 };
 
 // Default handlers
@@ -116,20 +160,20 @@ function handleServerMessage(message: ServerMessage): void {
       }
       break;
     case 'joinedRoom': {
-      const data = message.data as {
-        room?: string;
-        roomName?: string;
-        clients?: string[];
-      };
-      const roomName = data.room ?? data.roomName;
-      const clients = Array.isArray(data.clients) ? data.clients : [];
+      const normalized = normalizeJoinedRoomData(
+        message.data as {
+          room?: string;
+          roomName?: string;
+          clients?: string[];
+        },
+      );
 
-      if (!roomName) {
+      if (!normalized) {
         console.warn('joinedRoom message missing room name', message.data);
         break;
       }
 
-      handleJoinedRoom(roomName, clients);
+      handleJoinedRoom(normalized.room, normalized.clients);
       break;
     }
     case 'newClient':
