@@ -562,13 +562,6 @@ function updateQRCode(roomName: string): void {
   if (!qrContainer || !qrCodeDiv || !shareUrlEl) return;
 
   // Build the shareable URL with room and optional game
-  const params = new URLSearchParams();
-  params.set('room', roomName);
-
-  // Add current game if one is active
-  if (game.currentGame) {
-    params.set('game', game.currentGame);
-  }
 
   // Build a dedicated share URL that points at the server-rendered share page
   const encodedRoom = encodeURIComponent(roomName);
