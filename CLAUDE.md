@@ -6,13 +6,10 @@ When implementing features, always follow this workflow:
 
 1. **Develop** - Implement the feature with tests
 2. **Test** - Run tests locally to verify functionality
-3. **Commit & Push** - Commit changes and push to GitHub
-4. **Deploy** - SSH to server and deploy:
+3. **Commit & Push** - Commit changes and push to GitHub (REQUIRED before deploy)
+4. **Deploy** - Use this EXACT command (do not use separate ssh/cd/git commands):
    ```bash
-   ssh noahlozevski@hackbox.tv.lozev.ski
-   cd /home/noahlozevski/app
-   git pull
-   ./deploy.sh
+   ssh hackbox "cd /home/noahlozevski/app && git pull && ./deploy.sh"
    ```
 5. **Verify** - Run end-to-end tests against production to ensure deployment succeeded
 
