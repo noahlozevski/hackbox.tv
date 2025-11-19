@@ -572,6 +572,8 @@ function updateQRCode(roomName: string): void {
 
   const shareUrl = `${window.location.origin}${window.location.pathname}?${params.toString()}`;
 
+  updateOpenGraphMetadata(roomName, game.currentGame ?? null, shareUrl);
+
   // Show the container
   qrContainer.style.display = 'block';
 
@@ -592,6 +594,44 @@ function updateQRCode(roomName: string): void {
 
   // Setup share buttons
   setupShareButtons(shareUrl);
+}
+
+function updateOpenGraphMetadata(
+  roomName: string,
+  gameId: string | null,
+  shareUrl: string,
+): void {
+  const gameLabel =
+    gameId && gameInfo[gameId] ? gameInfo[gameId].name : gameId ? gameId : null;
+
+  const ogTitle = gameLabel
+    ? `Join ${gameLabel} in ${roomName} on hackbox.tv`
+    : `Join room ${roomName} on hackbox.tv`;
+
+  const ogDescription = gameLabel
+    ? `Room “${roomName}” is running ${gameLabel} on hackbox.tv. Drop in and help stress‑test the hackbox.`
+    : `Jump into room “${roomName}” on hackbox.tv to chat and spin up chaotic realtime games in your browser.`;
+
+  const setMeta = (selector: string, content: string): void => {
+    const el = document.querySelector(selector) as
+      | HTMLMetaElement
+      | HTMLTitleElement
+      | null;
+    if (el) {
+      if (el instanceof HTMLTitleElement) {
+        el.textContent = content;
+      } else {
+        el.setAttribute('content', content);
+      }
+    }
+  };
+
+  setMeta('title', `${ogTitle} – hackbox.tv`);
+  setMeta('meta[property="og:title"]', ogTitle);
+  setMeta('meta[property="og:description"]', ogDescription);
+  setMeta('meta[property="og:url"]', shareUrl);
+  setMeta('meta[name="twitter:title"]', ogTitle);
+  setMeta('meta[name="twitter:description"]', ogDescription);
 }
 
 function setupShareButtons(shareUrl: string): void {
