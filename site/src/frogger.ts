@@ -435,9 +435,11 @@ function moveEntities(delta: number): void {
 }
 
 function handleWater(lane: Lane, delta: number): void {
-  if (!state) return;
+  const currentState = state;
+  if (!currentState) return;
+  const frogX = currentState.frog.x;
   const onLog = lane.entities.find(
-    (log) => state!.frog.x >= log.x && state!.frog.x <= log.x + log.len,
+    (log) => frogX >= log.x && frogX <= log.x + log.len,
   );
   if (!onLog) {
     loseLife('Fell into the water!');
@@ -445,17 +447,21 @@ function handleWater(lane: Lane, delta: number): void {
   }
   const dir = lane.dir ?? 1;
   const speed = lane.speed ?? 1;
-  state.frog.x += dir * speed * delta;
-  if (state.frog.x < -0.5 || state.frog.x > state.columns - 0.5) {
+  currentState.frog.x += dir * speed * delta;
+  if (
+    currentState.frog.x < -0.5 ||
+    currentState.frog.x > currentState.columns - 0.5
+  ) {
     loseLife('Fell off the log!');
   }
 }
 
 function handleRoad(lane: Lane): void {
-  if (!state) return;
+  const currentState = state;
+  if (!currentState) return;
+  const frogX = currentState.frog.x;
   const hit = lane.entities.some(
-    (car) =>
-      state!.frog.x >= car.x - 0.4 && state!.frog.x <= car.x + car.len + 0.4,
+    (car) => frogX >= car.x - 0.4 && frogX <= car.x + car.len + 0.4,
   );
   if (hit) {
     loseLife('Got hit by a car!');

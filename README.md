@@ -2,7 +2,7 @@
 
 A real-time multiplayer game platform with WebSocket-based multiplayer framework.
 
-> Mobile-first: the games and UI are optimized for mobile devices and are expected to be used on phones.
+> Mobile-first: the games and UI are optimized for mobile devices and are expected to be used on phones. Frogger now ships with on-screen touch controls plus responsive canvas sizing—verify on an actual phone after any change.
 
 ## 🚨 CODE HYGIENE POLICY 🚨
 

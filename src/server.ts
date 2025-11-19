@@ -129,7 +129,8 @@ function handleJoinRoom(client: Client, roomName: string) {
       JSON.stringify({
         type: 'joinedRoom',
         data: {
-          roomName: room.name,
+          room: room.name,
+          clients: room.getClientList(),
         },
       }),
     );

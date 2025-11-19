@@ -3,8 +3,8 @@
  * Re-exports shared types and adds client-specific interfaces
  */
 
-// Re-export all shared types
-export * from '../../shared/types';
+// Re-export local copy of shared types for client build
+export * from './shared/types.js';
 
 // Client-specific game framework types
 export type PlayersChangedCallback = (players: string[]) => void;

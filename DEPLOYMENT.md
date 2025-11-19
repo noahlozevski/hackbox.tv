@@ -8,6 +8,8 @@ This document describes how to deploy and maintain the hackbox.tv WebSocket serv
 **Server**: Hetzner VPS
 **Repository**: https://github.com/noahlozevski/hackbox.tv.git
 
+**Mobile check**: Frogger and the UI are tuned for phones (touch controls + responsive canvas). After deploy, quickly load the site on a phone to confirm controls render and respond.
+
 ## Architecture
 
 - **Backend**: Node.js/TypeScript WebSocket server (port 3000)

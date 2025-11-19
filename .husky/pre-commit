@@ -1,5 +1,5 @@
-# Run typecheck on all TypeScript files
-npm run typecheck
+# Run build to ensure TypeScript compiles without errors
+npm run build
 
 # Run lint-staged for linting and formatting
 npx lint-staged

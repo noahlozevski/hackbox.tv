@@ -15,8 +15,7 @@
     "sourceMap": true
   },
   "include": [
-    "site/src/**/*",
-    "shared/**/*"
+    "site/src/**/*"
   ],
   "exclude": [
     "node_modules",

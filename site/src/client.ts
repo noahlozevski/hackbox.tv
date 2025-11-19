@@ -109,11 +109,13 @@ function handleServerMessage(data: string): void {
         game.state.playerId = message.data.clientId;
         break;
       case 'roomsList':
+        // message.data is Array<{ name: string; clients: string[] }>
         handleRoomsList(message.data);
         // Update the client list if we are in a room
         if (game.state.currentRoom) {
           const room = message.data.find(
-            (room) => room.name === game.state.currentRoom,
+            (room: { name: string; clients: string[] }) =>
+              room.name === game.state.currentRoom,
           );
           if (room && game.handlePlayersChanged) {
             game.handlePlayersChanged(room.clients.sort());
