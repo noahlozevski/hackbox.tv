@@ -471,6 +471,13 @@ function handleServerMessage(message: ServerMessage): void {
       break;
     case 'nameUpdated':
       handleNameUpdated(game, message.data.clientId, message.data.name);
+      // If this is our own name changing, refresh the share URL/QR
+      if (
+        message.data.clientId === game.state.playerId &&
+        game.state.currentRoom
+      ) {
+        updateQRCode(game.state.currentRoom);
+      }
       break;
     case 'message': {
       const clientId = message.data.playerId;
