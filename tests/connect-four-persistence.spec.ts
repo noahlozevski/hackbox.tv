@@ -99,11 +99,11 @@ test('Connect Four game state persists across refresh', async ({
   const colOne = page.locator('#game-container [data-col="1"]').first();
   await expect(colZero).toBeVisible({ timeout: 15_000 });
   await expect(colOne).toBeVisible({ timeout: 15_000 });
-  const isLocalFirst = await page.evaluate(() => {
-    const players = window.game.players.slice(0, 2);
-    if (!players.length) return false;
-    return players[0]?.id === window.game.state.playerId;
-  });
+  const subtitleText = await page
+    .locator('#game-container p')
+    .first()
+    .innerText();
+  const isLocalFirst = subtitleText.includes('You are Red');
   const localStatus = page.locator('#connect-four-status');
   const page2ColOne = page2.locator('#game-container [data-col="1"]').first();
   await expect(page2ColOne).toBeVisible({ timeout: 15_000 });
