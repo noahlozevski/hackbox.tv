@@ -11,6 +11,17 @@ const GAME_DISPLAY_NAMES: Record<string, string> = {
   lightcycle: 'Lightcycles',
 };
 
+const GAME_OG_IMAGES: Record<string, string> = {
+  connectFour: '/og_image.jpg',
+  marbleRace: '/og_image.jpg',
+  tiltPong: '/og_image.jpg',
+  arenaBumpers: '/og_image.jpg',
+  frogger: '/og_image.jpg',
+  ticTacToe: '/og_image.jpg',
+  rockPaperScissors: '/og_image.jpg',
+  lightcycle: '/og_image.jpg',
+};
+
 export interface SharePageOptions {
   origin?: string;
   roomName: string;
@@ -50,7 +61,9 @@ export function buildSharePageHtml(options: SharePageOptions): string {
   const title = buildTitle({ roomName, gameLabel, playerName });
   const description = buildDescription({ roomName, gameLabel, playerName });
 
-  const baseImageUrl = `${origin}/og_image.jpg`;
+  const imagePath =
+    gameId && GAME_OG_IMAGES[gameId] ? GAME_OG_IMAGES[gameId] : '/og_image.jpg';
+  const baseImageUrl = `${origin}${imagePath}`;
 
   return [
     '<!doctype html>',

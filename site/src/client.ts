@@ -13,6 +13,7 @@ import {
   updatePlayerNameDisplay,
   initializeNameInput,
 } from './name-manager.js';
+import { GAME_METADATA } from './game-metadata.js';
 
 declare global {
   interface Window {
@@ -610,7 +611,11 @@ function updateOpenGraphMetadata(
   shareUrl: string,
 ): void {
   const gameLabel =
-    gameId && gameInfo[gameId] ? gameInfo[gameId].name : gameId ? gameId : null;
+    gameId && GAME_METADATA[gameId]
+      ? GAME_METADATA[gameId].name
+      : gameId
+        ? gameId
+        : null;
 
   const playerName =
     typeof (game.state.playerName as unknown) === 'string'
@@ -686,8 +691,8 @@ function setupShareButtons(shareUrl: string): void {
         const roomName = game.state.currentRoom ?? 'a hackbox.tv room';
         const currentGameId = game.currentGame;
         const gameLabel =
-          currentGameId && gameInfo[currentGameId]
-            ? gameInfo[currentGameId].name
+          currentGameId && GAME_METADATA[currentGameId]
+            ? GAME_METADATA[currentGameId].name
             : currentGameId
               ? currentGameId
               : null;
@@ -733,20 +738,6 @@ function setupShareButtons(shareUrl: string): void {
   });
 }
 
-const gameInfo: Record<
-  string,
-  { name: string; minPlayers: number; maxPlayers?: number }
-> = {
-  connectFour: { name: 'Connect Four', minPlayers: 2, maxPlayers: 2 },
-  marbleRace: { name: 'Marble Race', minPlayers: 2 },
-  tiltPong: { name: 'Tilt Pong', minPlayers: 2 },
-  arenaBumpers: { name: 'Arena Bumpers', minPlayers: 2 },
-  frogger: { name: 'Frogger', minPlayers: 1 },
-  ticTacToe: { name: 'Tic-Tac-Toe', minPlayers: 2, maxPlayers: 2 },
-  rockPaperScissors: { name: 'Rock Paper Scissors', minPlayers: 2 },
-  lightcycle: { name: 'Lightcycles', minPlayers: 2 },
-};
-
 function formatTimeRemaining(expiresAt: number): string {
   const now = Date.now();
   const remaining = Math.max(0, expiresAt - now);
@@ -781,12 +772,12 @@ function updateGamesList(): void {
       ).currentRoomInfo
     : null;
 
-  Object.entries(gameInfo).forEach(([gameId, info]) => {
+  Object.entries(GAME_METADATA).forEach(([gameId, meta]) => {
     const gameEntry = games[gameId];
     const canPlay =
       gameEntry && typeof gameEntry.canPlay === 'function'
         ? gameEntry.canPlay()
-        : playerCount >= info.minPlayers;
+        : playerCount >= meta.minPlayers;
 
     const item = document.createElement('div');
     item.className = 'game-item';
@@ -809,7 +800,7 @@ function updateGamesList(): void {
 
     const nameSpan = document.createElement('span');
     nameSpan.className = 'game-name';
-    nameSpan.textContent = info.name;
+    nameSpan.textContent = meta.name;
 
     const playersSpan = document.createElement('span');
     playersSpan.className = 'game-players';
@@ -819,7 +810,7 @@ function updateGamesList(): void {
       playersSpan.textContent = '✓ Ready';
     } else {
       playersSpan.classList.add('waiting');
-      const needed = info.minPlayers - playerCount;
+      const needed = meta.minPlayers - playerCount;
       playersSpan.textContent = `Need ${needed} more`;
     }
 

@@ -152,31 +152,81 @@ All games on hackbox.tv follow these core principles:
 
 ## Adding a New Game
 
-1. Create `site/src/your-game.ts` (single file, self-contained)
-2. Import types: `import type { Game } from './types.js'`
-3. Implement the `Game` interface following the philosophy above:
-   ```typescript
-   const yourGame: Game = {
-     canPlay: () => window.game.players.length === 2,
-     start: () => { /* Initialize game, inject styles, setup touch controls */ },
-     stop: () => { /* Clean up everything: DOM, listeners, intervals, styles */ }
-   };
-   window.games.yourGame = yourGame;
-   ```
-4. Add to `site/index.html`:
-   ```html
-   <script type="module" src="dist/your-game.js"></script>
-   <button onclick="games.yourGame.start()">Your Game</button>
-   ```
-5. Build and deploy:
+Games are single TypeScript files that plug into the shared game framework and metadata.
+
+1. **Create the game file**
+
+   - Add `site/src/your-game-id.ts`
+   - Import types and helpers:
+     ```ts
+     import type { Game } from './types.js';
+     import { registerGame } from './game-registry.js';
+     import { showGameContainer, hideGameContainer } from './game-container.js';
+     ```
+
+2. **Implement the `Game` interface**
+
+   - Keep everything self‑contained in that file:
+     ```ts
+     const yourGame: Game = {
+       canPlay: () => window.game.players.length >= 2,
+       start: () => {
+         const root = showGameContainer('Your Game Name', stop);
+         // inject DOM + styles into `root`, subscribe to messages, etc.
+       },
+       stop: () => {
+         // clean up DOM, listeners, timers, then:
+         hideGameContainer();
+       },
+       saveState: () => {/* optional */},
+       loadState: (state) => {/* optional */},
+     };
+
+     registerGame('yourGameId', yourGame);
+     ```
+
+3. **Wire up metadata (name, players, OG image)**
+
+   - Add an entry in `site/src/game-metadata.ts`:
+     ```ts
+     yourGameId: {
+       id: 'yourGameId',
+       name: 'Your Game Name',
+       minPlayers: 2,
+       ogImage: '/og_image.jpg', // or a game-specific image under `site/`
+       tagline: 'Short, fun one-line description.',
+     },
+     ```
+
+4. **Register the lazy loader**
+
+   - In `site/src/client.ts`, extend `gameModuleLoaders`:
+     ```ts
+     const gameModuleLoaders: Record<string, () => Promise<unknown>> = {
+       // ...
+       yourGameId: () => import('./your-game-id.js'),
+     };
+     ```
+
+5. **Build, test, deploy**
+
    ```bash
+   npm run lint
+   npm test
+   npm run test:e2e
    npm run build
    git add .
-   git commit -m "Add your game"
+   git commit -m "Add yourGameId"
    git push
-   # DEPLOY NOW! (see above)
+   ./deploy-local.sh   # or ssh + ./deploy.sh
    ```
-6. **Test on mobile**: Load the site on an actual phone to verify touch controls work
+
+6. **Verify on mobile**
+
+   - Open `hackbox.tv` on an actual phone and make sure:
+     - The game appears under “Available Games”
+     - It starts/stops cleanly
+     - Touch controls feel good
 
 ## Multiplayer Framework & State Synchronization
 
