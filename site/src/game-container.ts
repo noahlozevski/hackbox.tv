@@ -64,7 +64,7 @@ let styleElement: HTMLStyleElement | null = null;
 
 export function showGameContainer(
   gameTitle: string,
-  onClose: () => void,
+  onClose: (clearState?: boolean) => void,
 ): HTMLElement {
   // Inject styles if not already present
   if (!styleElement) {
@@ -89,8 +89,8 @@ export function showGameContainer(
 
   const closeButton = document.createElement('button');
   closeButton.id = CLOSE_BUTTON_ID;
-  closeButton.textContent = 'Return to Chat';
-  closeButton.onclick = onClose;
+  closeButton.textContent = 'Exit Game';
+  closeButton.onclick = () => onClose(true); // Pass true to clear state
 
   header.appendChild(title);
   header.appendChild(closeButton);

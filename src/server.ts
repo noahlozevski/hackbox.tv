@@ -245,6 +245,15 @@ function handleClientMessage(client: Client, event: string, payload: unknown) {
         `Game state saved for "${data.gameId}" in room ${client.room.name}`,
       );
     }
+  } else if (event === 'clearGameState') {
+    // Client is exiting game completely - clear all state immediately
+    const gameId = payload as string;
+    if (client.room.activeGame === gameId || client.room.gameState) {
+      client.room.clearGameState();
+      console.log(
+        `Game state cleared for "${gameId}" in room ${client.room.name}`,
+      );
+    }
   }
 
   // Broadcast the message to all clients in the room (including sender)

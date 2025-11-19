@@ -1,16 +1,18 @@
 import { test, expect } from '@playwright/test';
 
+const baseURL = process.env.PW_BASE_URL || 'http://localhost:3000';
+
 test('game lifecycle: start, stop, and state persistence', async ({
   page,
   context,
 }) => {
   // Clear storage
-  await page.goto('http://localhost:3000');
+  await page.goto(baseURL);
   await page.evaluate(() => window.localStorage.clear());
 
   // Create two browser contexts to simulate two players
   const page2 = await context.newPage();
-  await page2.goto('http://localhost:3000');
+  await page2.goto(baseURL);
 
   // Wait for connection
   await page.waitForTimeout(500);
@@ -28,7 +30,7 @@ test('game lifecycle: start, stop, and state persistence', async ({
   await page2.waitForTimeout(200);
 
   // Player 1 starts the E2E test game
-  await page.goto(`http://localhost:3000?room=${roomName}&game=e2eTest`);
+  await page.goto(`${baseURL}?room=${roomName}&game=e2eTest`);
   await page.waitForTimeout(500);
 
   // Verify game started for player 1
@@ -79,7 +81,7 @@ test('game lifecycle: start, stop, and state persistence', async ({
 });
 
 test('stopped game should not auto-resume on refresh', async ({ page }) => {
-  await page.goto('http://localhost:3000');
+  await page.goto(baseURL);
   await page.evaluate(() => window.localStorage.clear());
 
   // Join a room
@@ -87,7 +89,7 @@ test('stopped game should not auto-resume on refresh', async ({ page }) => {
   await page.waitForTimeout(200);
 
   // Start E2E test game
-  await page.goto('http://localhost:3000?room=Room1&game=e2eTest');
+  await page.goto(`${baseURL}?room=Room1&game=e2eTest`);
   await page.waitForTimeout(500);
 
   // Verify game started

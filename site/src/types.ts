@@ -59,8 +59,9 @@ export interface Game {
 
   /**
    * Stop/cleanup the game
+   * @param clearState - If true, completely clear saved state (exit game)
    */
-  stop: () => void;
+  stop: (clearState?: boolean) => void;
 
   /**
    * Save the current game state (optional - for persistence)

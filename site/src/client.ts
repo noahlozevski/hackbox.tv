@@ -129,16 +129,20 @@ window.startGame = async (
   if (!gameEntry._originalStop) {
     gameEntry._originalStop = gameEntry.stop;
     // Wrap the stop method to broadcast stop event and save state
-    gameEntry.stop = function () {
-      // Save state first, then stop game
-      const savedState = gameEntry.saveState ? gameEntry.saveState() : null;
+    gameEntry.stop = function (clearState = false) {
+      // Save state first, then stop game (unless we're clearing)
+      const savedState =
+        !clearState && gameEntry.saveState ? gameEntry.saveState() : null;
 
       gameEntry._originalStop!.call(this);
       game.currentGame = null;
 
-      // Send stop message first, then save state (if any)
+      // Send stop message first, then either save or clear state
       game.sendMessage('stopGame', gameId);
-      if (savedState) {
+      if (clearState) {
+        // Send clearGameState message to completely remove state
+        game.sendMessage('clearGameState', gameId);
+      } else if (savedState) {
         game.sendMessage('saveGameState', { gameId, state: savedState });
       }
 
