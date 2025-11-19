@@ -1,4 +1,5 @@
 import { Client } from './client';
+import * as MessageBuilder from './message-builder';
 
 export class Room {
   public name: string;
@@ -21,26 +22,10 @@ export class Room {
     }
 
     client.room = null;
-    this.#broadcast(
-      JSON.stringify({
-        type: 'clientLeft',
-        data: {
-          clientId: client.id,
-        },
-      }),
-    );
+    MessageBuilder.broadcastClientLeft(this, client.id);
   }
 
   getClientList(): string[] {
     return Array.from(this.clients).map((client) => client.id);
-  }
-
-  /** broadcast a message to all clients in the room */
-  #broadcast(message: string, sender?: Client) {
-    this.clients.forEach((client) => {
-      if (client !== sender) {
-        client.ws.send(message);
-      }
-    });
   }
 }

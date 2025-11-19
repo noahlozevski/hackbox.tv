@@ -1,4 +1,5 @@
 import type { GameFramework, GameRegistry, ServerMessage } from './types.js';
+import * as MessageBuilder from './message-builder.js';
 
 declare global {
   interface Window {
@@ -20,37 +21,11 @@ const game: GameFramework = {
   onGameStateUpdate: null,
 
   sendMessage(event: string, payload: unknown): void {
-    if (!this.ws) {
-      console.error('WebSocket not connected');
-      return;
-    }
-    this.ws.send(
-      JSON.stringify({
-        type: 'message',
-        data: {
-          message: {
-            event,
-            payload,
-          },
-        },
-      }),
-    );
+    MessageBuilder.sendGameMessage(this.ws, event, payload);
   },
 
   sendGameAction(gameType: string, action: unknown): void {
-    if (!this.ws) {
-      console.error('WebSocket not connected');
-      return;
-    }
-    this.ws.send(
-      JSON.stringify({
-        type: 'gameAction',
-        data: {
-          gameType,
-          action,
-        },
-      }),
-    );
+    MessageBuilder.sendGameAction(this.ws, gameType, action);
   },
 };
 
@@ -193,13 +168,7 @@ function handleRoomsList(
 }
 
 function joinRoom(roomName: string): void {
-  const message = {
-    type: 'joinRoom',
-    data: {
-      roomName: roomName,
-    },
-  };
-  ws.send(JSON.stringify(message));
+  MessageBuilder.sendJoinRoom(ws, roomName);
 }
 
 function handleJoinedRoom(roomName: string, clients: string[]): void {

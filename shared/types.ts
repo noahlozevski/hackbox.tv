@@ -138,15 +138,43 @@ export type ClientMessage =
   | GameMessage;
 
 // ============================================================================
-// Game State Types
+// Game State Types (generic, game-agnostic)
 // ============================================================================
 
-export type GameAction = TicTacToeAction | RockPaperScissorsAction;
+/**
+ * Minimal shape that all game states share.
+ * Individual games can extend this with their own fields without
+ * modifying server-side unions.
+ */
+export interface BaseGameState {
+  gameType: string;
+  players: string[];
+  // Extra per-game fields are allowed
+  [key: string]: unknown;
+}
 
-export type GameState = TicTacToeState | RockPaperScissorsState;
+/**
+ * Minimal shape that all game actions share.
+ * Individual games define their own action types that are structurally
+ * compatible with this interface.
+ */
+export interface BaseGameAction {
+  type: string;
+  playerId: string;
+  // Extra per-game fields are allowed
+  [key: string]: unknown;
+}
 
-// Tic-Tac-Toe
-export interface TicTacToeAction {
+// Generic aliases used by the server/client protocol.
+// New games should not need to touch these.
+export type GameAction = BaseGameAction;
+export type GameState = BaseGameState;
+
+// ----------------------------------------------------------------------------
+// Tic-Tac-Toe (example of a strongly-typed game built on the generic base)
+// ----------------------------------------------------------------------------
+
+export interface TicTacToeAction extends BaseGameAction {
   type: 'move' | 'restart';
   playerId: string;
   move?: {
@@ -155,38 +183,42 @@ export interface TicTacToeAction {
   };
 }
 
-export interface TicTacToeState {
+export interface TicTacToeState extends BaseGameState {
   gameType: 'tic-tac-toe';
   board: (string | null)[][];
   currentTurn: string;
   winner: string | null;
   gameOver: boolean;
-  players: string[];
 }
 
-// Rock-Paper-Scissors
+// ----------------------------------------------------------------------------
+// Rock-Paper-Scissors (example of another typed game)
+// ----------------------------------------------------------------------------
+
 export type Choice = 'rock' | 'paper' | 'scissors';
 
-export interface RockPaperScissorsAction {
+export interface RockPaperScissorsAction extends BaseGameAction {
   type: 'choice' | 'restart';
   playerId: string;
   choice?: Choice;
 }
 
-export interface RockPaperScissorsState {
+export interface RockPaperScissorsState extends BaseGameState {
   gameType: 'rock-paper-scissors';
   choices: Record<string, Choice | null>;
   scores: Record<string, number>;
   roundComplete: boolean;
   roundWinner: string | null;
-  players: string[];
 }
 
 // ============================================================================
 // Game Engine Interface
 // ============================================================================
 
-export interface GameEngine<S extends GameState, A extends GameAction> {
+export interface GameEngine<
+  S extends GameState = GameState,
+  A extends GameAction = GameAction,
+> {
   /**
    * Initialize a new game state
    */

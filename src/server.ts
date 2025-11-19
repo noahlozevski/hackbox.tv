@@ -4,6 +4,7 @@ import { Client } from './client';
 import { WS } from './types';
 import { GameManager } from './game-manager';
 import type { GameAction } from '../shared/types';
+import * as MessageBuilder from './message-builder';
 
 // Server setup
 const PORT = 3000;
@@ -28,14 +29,7 @@ wss.on('connection', (websocket: WebSocket) => {
 
   const client = new Client(ws);
   clients.set(ws, client);
-  ws.send(
-    JSON.stringify({
-      type: 'connected',
-      data: {
-        clientId: client.id,
-      },
-    }),
-  );
+  MessageBuilder.sendConnected(client, client.id);
   console.log(`New client connected: ${client.id}`);
 
   // Send available rooms to the client
@@ -86,12 +80,7 @@ function sendAvailableRooms(client: Client) {
     clients: room.getClientList(),
   }));
 
-  const message = JSON.stringify({
-    type: 'roomsList',
-    data: roomsInfo,
-  });
-
-  client.ws.send(message);
+  MessageBuilder.sendRoomsList(client, roomsInfo);
 }
 
 function handleMessage(client: Client, message: string) {
@@ -108,11 +97,11 @@ function handleMessage(client: Client, message: string) {
         handleGameAction(client, parsedMessage.data);
         break;
       default:
-        sendError(client, 'Unknown message type');
+        MessageBuilder.sendError(client, 'Unknown message type');
     }
   } catch (error) {
     console.error(`Error handling message from client ${client.id}: ${error}`);
-    sendError(client, 'Invalid message format');
+    MessageBuilder.sendError(client, 'Invalid message format');
   }
 }
 
@@ -125,32 +114,15 @@ function handleJoinRoom(client: Client, roomName: string) {
     console.log(`Client ${client.id} joined room ${room.name}`);
 
     // Notify the client
-    client.ws.send(
-      JSON.stringify({
-        type: 'joinedRoom',
-        data: {
-          room: room.name,
-          clients: room.getClientList(),
-        },
-      }),
-    );
+    MessageBuilder.sendJoinedRoom(client, room.name, room.getClientList());
 
     // Notify other clients in the room
-    broadcastToRoom(
-      room,
-      JSON.stringify({
-        type: 'newClient',
-        data: {
-          clientId: client.id,
-        },
-      }),
-      client,
-    );
+    MessageBuilder.broadcastNewClient(room, client.id, client);
 
     // Send updated room info to the client
     sendAvailableRooms(client);
   } else {
-    sendError(client, 'Room does not exist');
+    MessageBuilder.sendError(client, 'Room does not exist');
   }
 }
 
@@ -158,19 +130,14 @@ function handleJoinRoom(client: Client, roomName: string) {
 function handleClientMessage(client: Client, messageContent: string) {
   if (client.room) {
     // Broadcast the message to other clients in the room
-    broadcastToRoom(
+    MessageBuilder.broadcastChatMessage(
       client.room,
-      JSON.stringify({
-        type: 'message',
-        data: {
-          clientId: client.id,
-          message: messageContent,
-        },
-      }),
+      client.id,
+      messageContent,
       client,
     );
   } else {
-    sendError(client, 'You are not in a room');
+    MessageBuilder.sendError(client, 'You are not in a room');
   }
 }
 
@@ -184,22 +151,13 @@ function handleDisconnect(client: Client) {
   }
 }
 
-// Broadcast a message to all clients in a room
-function broadcastToRoom(room: Room, message: string, sender?: Client) {
-  room.clients.forEach((client) => {
-    if (client !== sender) {
-      client.ws.send(message);
-    }
-  });
-}
-
 // Handle game actions (server-authoritative)
 function handleGameAction(
   client: Client,
   data: { gameType: string; action: GameAction },
 ) {
   if (!client.room) {
-    sendError(client, 'You must be in a room to play');
+    MessageBuilder.sendError(client, 'You must be in a room to play');
     return;
   }
 
@@ -209,7 +167,7 @@ function handleGameAction(
   if (!gameManager.hasActiveGame(client.room.name)) {
     const players = client.room.getClientList();
     if (players.length < 2) {
-      sendError(client, 'Need at least 2 players to start');
+      MessageBuilder.sendError(client, 'Need at least 2 players to start');
       return;
     }
     gameManager.startGame(client.room.name, gameType, players);
@@ -219,29 +177,10 @@ function handleGameAction(
   const result = gameManager.processAction(client.room.name, action);
 
   // Broadcast updated state to all players in the room
-  const stateUpdate = JSON.stringify({
-    type: 'gameStateUpdate',
-    data: {
-      gameType,
-      state: result.state,
-      validationError: result.error,
-    },
-  });
-
-  // Send to all clients in room (including sender)
-  client.room.clients.forEach((roomClient) => {
-    roomClient.ws.send(stateUpdate);
-  });
-}
-
-// Send an error message to the client
-function sendError(client: Client, errorMessage: string) {
-  client.ws.send(
-    JSON.stringify({
-      type: 'error',
-      data: {
-        message: errorMessage,
-      },
-    }),
+  MessageBuilder.broadcastGameStateUpdate(
+    client.room,
+    gameType,
+    result.state,
+    result.error,
   );
 }
