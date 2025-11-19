@@ -130,6 +130,27 @@ test('Connect Four game state persists across refresh', async ({
   // Give some time for messages and state sync
   await page.waitForTimeout(1000);
 
+  // Ensure the server already reflects both moves before reloading
+  await expect
+    .poll(
+      async () =>
+        page.evaluate(() => {
+          const info = (
+            window as unknown as {
+              currentRoomInfo?: { gameState?: { board?: (0 | 1 | null)[][] } };
+            }
+          ).currentRoomInfo;
+          const rows =
+            info?.gameState && Array.isArray(info.gameState.board)
+              ? info.gameState.board
+              : null;
+          if (!rows) return 0;
+          return rows.flat().filter((cell) => cell !== null).length;
+        }),
+      { timeout: 15_000 },
+    )
+    .toBeGreaterThanOrEqual(2);
+
   // Refresh Player 1 (simulating a page reload)
   await page.goto(`${baseURL}?room=${roomName}`, gotoOptions);
   await joinRoomExplicit(page, roomName);
