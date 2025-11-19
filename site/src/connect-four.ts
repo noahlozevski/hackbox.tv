@@ -1,4 +1,9 @@
 import type { Game } from './types.js';
+import {
+  getFirstPlayerId,
+  getPlayerIndex,
+  getNextPlayerId,
+} from './player-utils.js';
 
 type Cell = string | null;
 
@@ -44,7 +49,7 @@ function initializeState(): void {
   state = {
     playerId,
     board: Array.from({ length: ROWS }, () => Array<Cell>(COLS).fill(null)),
-    currentTurn: window.game.players[0],
+    currentTurn: getFirstPlayerId(window.game.players) || playerId,
     winner: null,
     gameOver: false,
     isResetting: false,
@@ -143,7 +148,7 @@ function renderBoard(): void {
 
       const value = state.board[row][col];
       if (value) {
-        const playerIndex = window.game.players.indexOf(value);
+        const playerIndex = getPlayerIndex(window.game.players, value);
         cell.style.backgroundColor = playerIndex === 0 ? '#f87171' : '#fbbf24';
         cell.style.cursor = 'default';
       }
@@ -209,9 +214,8 @@ function makeMove(playerId: string, col: number, row: number): void {
     return;
   }
 
-  const idx = window.game.players.indexOf(state.currentTurn);
   state.currentTurn =
-    window.game.players[(idx + 1) % window.game.players.length];
+    getNextPlayerId(window.game.players, state.currentTurn) || state.currentTurn;
   updateStatus();
 }
 
@@ -265,7 +269,7 @@ function scheduleRestart(): void {
 
   state.isResetting = true;
   restartTimer = window.setTimeout(() => {
-    if (state?.playerId === window.game.players[0]) {
+    if (state?.playerId === getFirstPlayerId(window.game.players)) {
       window.game.sendMessage('restart', {});
     }
     resetBoard();
@@ -278,7 +282,7 @@ function resetBoard(): void {
   state.board = Array.from({ length: ROWS }, () =>
     Array<Cell>(COLS).fill(null),
   );
-  state.currentTurn = window.game.players[0];
+  state.currentTurn = getFirstPlayerId(window.game.players) || state.playerId;
   state.winner = null;
   state.gameOver = false;
   state.isResetting = false;
@@ -304,7 +308,7 @@ function updateStatus(): void {
   }
 
   const isOurTurn = state.currentTurn === state.playerId;
-  const activeIndex = window.game.players.indexOf(state.currentTurn);
+  const activeIndex = getPlayerIndex(window.game.players, state.currentTurn);
   const color = activeIndex === 0 ? 'Red' : 'Yellow';
   statusLine.textContent = isOurTurn
     ? `Your turn (${color})`

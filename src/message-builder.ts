@@ -13,6 +13,7 @@ import type {
   ClientLeftMessage,
   GameMessage,
   GameStateUpdateMessage,
+  NameUpdatedMessage,
   ErrorMessage,
   GameState,
 } from '../shared/types';
@@ -54,17 +55,17 @@ function broadcastToRoomIncludingSender<T>(room: Room, message: T): void {
 // Server -> Client Message Builders
 // ============================================================================
 
-export function sendConnected(client: Client, clientId: string): void {
+export function sendConnected(client: Client, clientId: string, name: string): void {
   const message: ConnectedMessage = {
     type: 'connected',
-    data: { clientId },
+    data: { clientId, name },
   };
   sendToClient(client, message);
 }
 
 export function sendRoomsList(
   client: Client,
-  rooms: Array<{ name: string; clients: string[] }>,
+  rooms: Array<{ name: string; clients: Array<{ id: string; name: string }> }>,
 ): void {
   const message: RoomsListMessage = {
     type: 'roomsList',
@@ -76,7 +77,7 @@ export function sendRoomsList(
 export function sendJoinedRoom(
   client: Client,
   roomName: string,
-  clients: string[],
+  clients: Array<{ id: string; name: string }>,
 ): void {
   const message: JoinedRoomMessage = {
     type: 'joinedRoom',
@@ -91,11 +92,12 @@ export function sendJoinedRoom(
 export function broadcastNewClient(
   room: Room,
   clientId: string,
+  name: string,
   excludeClient?: Client,
 ): void {
   const message: NewClientMessage = {
     type: 'newClient',
-    data: { clientId },
+    data: { clientId, name },
   };
   broadcastToRoom(room, message, excludeClient);
 }
@@ -162,6 +164,27 @@ export function broadcastGameStateUpdate(
     },
   };
   broadcastToRoomIncludingSender(room, message);
+}
+
+export function sendNameUpdated(client: Client, clientId: string, name: string): void {
+  const message: NameUpdatedMessage = {
+    type: 'nameUpdated',
+    data: { clientId, name },
+  };
+  sendToClient(client, message);
+}
+
+export function broadcastNameUpdated(
+  room: Room,
+  clientId: string,
+  name: string,
+  excludeClient?: Client,
+): void {
+  const message: NameUpdatedMessage = {
+    type: 'nameUpdated',
+    data: { clientId, name },
+  };
+  broadcastToRoom(room, message, excludeClient);
 }
 
 export function sendError(client: Client, errorMessage: string): void {

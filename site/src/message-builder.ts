@@ -7,6 +7,7 @@ import type {
   JoinRoomRequest,
   GameActionRequest,
   GameMessage,
+  UpdateNameRequest,
 } from './shared/types.js';
 
 /**
@@ -78,6 +79,14 @@ export function sendGameAction(
       gameType,
       action: action as GameActionRequest['data']['action'],
     },
+  };
+  sendToServer(ws, message);
+}
+
+export function sendUpdateName(ws: WebSocket | null, name: string): void {
+  const message: UpdateNameRequest = {
+    type: 'updateName',
+    data: { name },
   };
   sendToServer(ws, message);
 }

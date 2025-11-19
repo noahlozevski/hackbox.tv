@@ -514,7 +514,7 @@ function setupNetworking(): void {
     }
   };
 
-  window.game.handlePlayersChanged = (playersList: string[]) => {
+  window.game.handlePlayersChanged = (playersList) => {
     if (prevOnPlayersChanged) {
       prevOnPlayersChanged(playersList);
     }
@@ -541,7 +541,7 @@ function teardownNetworking(): void {
   prevOnPlayersChanged = null;
 }
 
-function handlePlayersChanged(playersList: string[]): void {
+function handlePlayersChanged(playersList: PlayerInfo[]): void {
   const remaining = new Set(playersList);
   for (const id of players.keys()) {
     if (!remaining.has(id)) {

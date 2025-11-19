@@ -515,7 +515,7 @@ function setupNetworking(): void {
     },
   );
 
-  window.game.handlePlayersChanged = (playersList: string[]) => {
+  window.game.handlePlayersChanged = (playersList) => {
     handlePlayersChanged(playersList);
     if (prevOnPlayersChanged) {
       prevOnPlayersChanged(playersList);
@@ -574,7 +574,7 @@ function teardownNetworking(): void {
   }
 }
 
-function handlePlayersChanged(playersList: string[]): void {
+function handlePlayersChanged(playersList: PlayerInfo[]): void {
   const sorted = [...playersList].sort();
   initializePlayers(sorted);
 

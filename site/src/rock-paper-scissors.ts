@@ -1,4 +1,4 @@
-import type { Game } from './types.js';
+import type { Game, PlayerInfo } from './types.js';
 import { registerGame } from './game-registry.js';
 
 type Choice = 'rock' | 'paper' | 'scissors';

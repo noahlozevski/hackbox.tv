@@ -7,12 +7,21 @@ import type { JoinedRoomMessage } from '../shared/types';
 
 describe('normalizeJoinedRoomData', () => {
   it('handles current { room, clients } shape', () => {
-    const data = { room: 'Room1', clients: ['a', 'b'] };
+    const data = {
+      room: 'Room1',
+      clients: [
+        { id: 'a', name: 'Alice' },
+        { id: 'b', name: 'Bob' },
+      ],
+    };
     const result = normalizeJoinedRoomData(data);
 
     expect(result).not.toBeNull();
     expect(result?.room).toBe('Room1');
-    expect(result?.clients).toEqual(['a', 'b']);
+    expect(result?.clients).toEqual([
+      { id: 'a', name: 'Alice' },
+      { id: 'b', name: 'Bob' },
+    ]);
   });
 
   it('handles legacy { roomName } shape and defaults clients to []', () => {
@@ -36,12 +45,12 @@ describe('normalizeJoinedRoomMessage', () => {
       type: 'joinedRoom',
       data: {
         room: 'Room3',
-        clients: ['c1'],
+        clients: [{ id: 'c1', name: 'Charlie' }],
       },
     };
 
     const normalized = normalizeJoinedRoomMessage(message);
     expect(normalized.room).toBe('Room3');
-    expect(normalized.clients).toEqual(['c1']);
+    expect(normalized.clients).toEqual([{ id: 'c1', name: 'Charlie' }]);
   });
 });

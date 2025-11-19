@@ -25,7 +25,10 @@ export class Room {
     MessageBuilder.broadcastClientLeft(this, client.id);
   }
 
-  getClientList(): string[] {
-    return Array.from(this.clients).map((client) => client.id);
+  getClientList(): Array<{ id: string; name: string }> {
+    return Array.from(this.clients).map((client) => ({
+      id: client.id,
+      name: client.name,
+    }));
   }
 }

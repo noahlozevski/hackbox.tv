@@ -3,23 +3,25 @@
  * Re-exports shared types and adds client-specific interfaces
  */
 
-// Re-export shared protocol types for client build
+// Re-export shared protocol types for client build (including PlayerInfo)
 export * from './shared/types.js';
+import type { PlayerInfo } from './shared/types.js';
 
 // Client-specific game framework types
-export type PlayersChangedCallback = (players: string[]) => void;
+export type PlayersChangedCallback = (players: PlayerInfo[]) => void;
 export type MessageCallback = (playerId: string, event: string, payload: unknown) => void;
 export type GameStateCallback = (state: unknown) => void;
 
 // Game state interface
 export interface GameState {
   playerId: string | null;
+  playerName: string | null;
   currentRoom: string | null;
 }
 
 // Main game framework interface
 export interface GameFramework {
-  players: string[];
+  players: PlayerInfo[];
   currentGame: string | null;
   state: GameState;
   ws: WebSocket | null;
@@ -36,6 +38,7 @@ export interface GameFramework {
   // Methods
   sendMessage: (event: string, payload: unknown) => void;
   sendGameAction: (gameType: string, action: unknown) => void;
+  updateName: (name: string) => void;
 }
 
 // Individual game interface that each game must implement

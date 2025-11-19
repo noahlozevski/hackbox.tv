@@ -1,4 +1,4 @@
-import type { Game } from './types.js';
+import type { Game, PlayerInfo } from './types.js';
 
 interface NetMarbleState {
   x: number;
@@ -555,7 +555,7 @@ function setupNetworking(): void {
     },
   );
 
-  window.game.handlePlayersChanged = (playersList: string[]) => {
+  window.game.handlePlayersChanged = (playersList) => {
     handlePlayersChanged(playersList);
     if (prevOnPlayersChanged) prevOnPlayersChanged(playersList);
   };
@@ -587,7 +587,7 @@ function teardownNetworking(): void {
   }
 }
 
-function handlePlayersChanged(playersList: string[]): void {
+function handlePlayersChanged(playersList: PlayerInfo[]): void {
   const active = new Set(playersList);
   for (const id of marbles.keys()) {
     if (!active.has(id)) {

@@ -3,10 +3,16 @@ import type {
   GameRegistry,
   ServerMessage,
   Game,
+  PlayerInfo,
 } from './types.js';
 import * as MessageBuilder from './message-builder.js';
 import { ConnectionManager } from './connection-manager.js';
 import { normalizeJoinedRoomData } from './shared/protocol-helpers.js';
+import {
+  handleNameUpdated,
+  updatePlayerNameDisplay,
+  initializeNameInput,
+} from './name-manager.js';
 
 declare global {
   interface Window {
@@ -28,6 +34,7 @@ const game: GameFramework = {
   currentGame: null,
   state: {
     playerId: null,
+    playerName: null,
     currentRoom: null,
   },
   ws: null,
@@ -66,6 +73,10 @@ const game: GameFramework = {
   sendGameAction(gameType: string, action: unknown): void {
     MessageBuilder.sendGameAction(this.ws, gameType, action);
   },
+
+  updateName(name: string): void {
+    MessageBuilder.sendUpdateName(this.ws, name);
+  },
 };
 
 const gameModuleLoaders: Record<string, () => Promise<unknown>> = {
@@ -102,11 +113,17 @@ window.startGame = async (gameId: string): Promise<void> => {
     return;
   }
 
+  game.currentGame = gameId;
   gameEntry.start();
+
+  // Update QR code to include the game parameter
+  if (game.state.currentRoom) {
+    updateQRCode(game.state.currentRoom);
+  }
 };
 
 // Default handlers
-game.handlePlayersChanged = function (players: string[]): void {
+game.handlePlayersChanged = function (players: PlayerInfo[]): void {
   console.log('Players changed: ', players);
   game.players = players;
 
@@ -137,9 +154,10 @@ if (!window.games) {
 connection.connect('/ws/');
 game.ws = connection.getWebSocket();
 
-// Check URL for room parameter on initial load
+// Check URL for room and game parameters on initial load
 const urlParams = new URLSearchParams(window.location.search);
 const roomParam = urlParams.get('room');
+const gameParam = urlParams.get('game');
 
 // Try to rejoin the last room on reload/reconnect, or join room from URL
 const persisted = connection.getPersistedState();
@@ -148,6 +166,13 @@ if (roomToJoin) {
   // wait a tick so the socket has a chance to open
   window.setTimeout(() => {
     joinRoom(roomToJoin);
+
+    // If there's a game parameter, auto-start it after joining
+    if (gameParam) {
+      window.setTimeout(() => {
+        window.startGame(gameParam);
+      }, 500);
+    }
   }, 200);
 }
 
@@ -160,29 +185,25 @@ function handleServerMessage(message: ServerMessage): void {
     case 'connected':
       console.log('Connected to server with client ID:', message.data.clientId);
       game.state.playerId = message.data.clientId;
+      game.state.playerName = message.data.name;
+      updatePlayerNameDisplay(game);
       break;
     case 'roomsList':
-      // message.data is Array<{ name: string; clients: string[] }>
+      // message.data is Array<{ name: string; clients: Array<{ id: string; name: string }> }>
       handleRoomsList(message.data);
       // Update the client list if we are in a room
       if (game.state.currentRoom) {
         const room = message.data.find(
-          (room: { name: string; clients: string[] }) =>
+          (room: { name: string; clients: Array<{ id: string; name: string }> }) =>
             room.name === game.state.currentRoom,
         );
         if (room && game.handlePlayersChanged) {
-          game.handlePlayersChanged(room.clients.sort());
+          game.handlePlayersChanged(room.clients.sort((a, b) => a.id.localeCompare(b.id)));
         }
       }
       break;
     case 'joinedRoom': {
-      const normalized = normalizeJoinedRoomData(
-        message.data as {
-          room?: string;
-          roomName?: string;
-          clients?: string[];
-        },
-      );
+      const normalized = normalizeJoinedRoomData(message.data);
 
       if (!normalized) {
         console.warn('joinedRoom message missing room name', message.data);
@@ -193,10 +214,10 @@ function handleServerMessage(message: ServerMessage): void {
       break;
     }
     case 'newClient':
-      handleNewClient(message.data.clientId);
+      handleNewClient(message.data.clientId, message.data.name);
       if (game.handlePlayersChanged) {
         game.handlePlayersChanged(
-          [...game.players, message.data.clientId].sort(),
+          [...game.players, { id: message.data.clientId, name: message.data.name }].sort((a, b) => a.id.localeCompare(b.id)),
         );
       }
       break;
@@ -205,10 +226,13 @@ function handleServerMessage(message: ServerMessage): void {
       if (game.handlePlayersChanged) {
         game.handlePlayersChanged(
           game.players
-            .filter((player) => player !== message.data.clientId)
-            .sort(),
+            .filter((player) => player.id !== message.data.clientId)
+            .sort((a, b) => a.id.localeCompare(b.id)),
         );
       }
+      break;
+    case 'nameUpdated':
+      handleNameUpdated(game, message.data.clientId, message.data.name);
       break;
     case 'message': {
       const clientId = message.data.playerId;
@@ -236,7 +260,7 @@ function handleServerMessage(message: ServerMessage): void {
 }
 
 function handleRoomsList(
-  rooms: Array<{ name: string; clients: string[] }>,
+  rooms: Array<{ name: string; clients: Array<{ id: string; name: string }> }>,
 ): void {
   const roomList = document.getElementById('roomList');
   if (!roomList) return;
@@ -261,7 +285,7 @@ function joinRoom(roomName: string): void {
   MessageBuilder.sendJoinRoom(connection.getWebSocket(), roomName);
 }
 
-function handleJoinedRoom(roomName: string, clients: string[]): void {
+function handleJoinedRoom(roomName: string, clients: Array<{ id: string; name: string }>): void {
   game.state.currentRoom = roomName;
   connection.setLastRoom(roomName);
   const roomNameEl = document.getElementById('roomName');
@@ -283,7 +307,13 @@ function handleJoinedRoom(roomName: string, clients: string[]): void {
 
   updateClientList(clients);
   updateQRCode(roomName);
-  updateGamesList();
+
+  // Initialize game.players with the current clients in the room
+  if (game.handlePlayersChanged) {
+    game.handlePlayersChanged(
+      clients.map(c => ({ id: c.id, name: c.name })).sort((a, b) => a.id.localeCompare(b.id))
+    );
+  }
 }
 
 function updateQRCode(roomName: string): void {
@@ -293,8 +323,16 @@ function updateQRCode(roomName: string): void {
 
   if (!qrContainer || !qrCodeDiv || !shareUrlEl) return;
 
-  // Build the shareable URL
-  const shareUrl = `${window.location.origin}${window.location.pathname}?room=${encodeURIComponent(roomName)}`;
+  // Build the shareable URL with room and optional game
+  const params = new URLSearchParams();
+  params.set('room', roomName);
+
+  // Add current game if one is active
+  if (game.currentGame) {
+    params.set('game', game.currentGame);
+  }
+
+  const shareUrl = `${window.location.origin}${window.location.pathname}?${params.toString()}`;
 
   // Show the container
   qrContainer.style.display = 'block';
@@ -313,6 +351,58 @@ function updateQRCode(roomName: string): void {
 
   // Update the URL text
   shareUrlEl.textContent = shareUrl;
+
+  // Setup share buttons
+  setupShareButtons(shareUrl);
+}
+
+function setupShareButtons(shareUrl: string): void {
+  const shareButton = document.getElementById('share-button');
+  const copyButton = document.getElementById('copy-button');
+
+  if (!shareButton || !copyButton) return;
+
+  // Remove old event listeners by cloning
+  const newShareButton = shareButton.cloneNode(true) as HTMLButtonElement;
+  const newCopyButton = copyButton.cloneNode(true) as HTMLButtonElement;
+  shareButton.parentNode?.replaceChild(newShareButton, shareButton);
+  copyButton.parentNode?.replaceChild(newCopyButton, copyButton);
+
+  // Native share button (if Web Share API is available)
+  if (navigator.share) {
+    newShareButton.addEventListener('click', async () => {
+      try {
+        await navigator.share({
+          title: 'Join my hackbox.tv room',
+          text: 'Join my game room on hackbox.tv!',
+          url: shareUrl,
+        });
+      } catch (err) {
+        // User cancelled or share failed
+        if (err instanceof Error && err.name !== 'AbortError') {
+          console.error('Share failed:', err);
+        }
+      }
+    });
+  } else {
+    // Hide share button if not supported
+    newShareButton.style.display = 'none';
+  }
+
+  // Copy button
+  newCopyButton.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      const originalText = newCopyButton.textContent;
+      newCopyButton.textContent = 'Copied!';
+      setTimeout(() => {
+        newCopyButton.textContent = originalText;
+      }, 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+      alert('Failed to copy link');
+    }
+  });
 }
 
 const gameInfo: Record<
@@ -387,9 +477,9 @@ function updateGamesList(): void {
   });
 }
 
-function handleNewClient(clientId: string): void {
-  addClientToList(clientId);
-  addSystemMessage('Client ' + clientId + ' has joined the room.');
+function handleNewClient(clientId: string, clientName: string): void {
+  addClientToList(clientId, clientName);
+  addSystemMessage('Client ' + clientName + ' has joined the room.');
 }
 
 function handleClientLeft(clientId: string): void {
@@ -405,12 +495,12 @@ function handleError(message: string): void {
   alert('Error: ' + message);
 }
 
-function addClientToList(clientId: string): void {
+function addClientToList(clientId: string, clientName?: string): void {
   const clientList = document.getElementById('clientList');
   if (!clientList) return;
 
   const li = document.createElement('li');
-  li.textContent = clientId;
+  li.textContent = clientName || clientId;
   li.id = 'client-' + clientId;
   clientList.appendChild(li);
 }
@@ -422,13 +512,13 @@ function removeClientFromList(clientId: string): void {
   }
 }
 
-function updateClientList(clients: string[]): void {
+function updateClientList(clients: Array<{ id: string; name: string }>): void {
   const clientList = document.getElementById('clientList');
   if (!clientList) return;
 
   clientList.innerHTML = '';
-  clients.forEach(function (clientId) {
-    addClientToList(clientId);
+  clients.forEach(function (client) {
+    addClientToList(client.id, client.name);
   });
 }
 
@@ -484,3 +574,6 @@ if (messageInput) {
     }
   });
 }
+
+// Initialize name input functionality
+initializeNameInput(game);

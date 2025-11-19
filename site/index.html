@@ -305,7 +305,19 @@
         font-family: monospace;
         font-size: 0.75rem;
         color: #666;
-        margin: 0.5rem 0 0 0;
+        margin: 0.5rem 0;
+      }
+
+      .share-buttons {
+        display: flex;
+        gap: 0.5rem;
+        justify-content: center;
+        margin-top: 0.75rem;
+      }
+
+      .share-buttons button {
+        padding: 0.6rem 1rem;
+        font-size: 0.9rem;
       }
 
       /* Client list */
@@ -381,6 +393,17 @@
         <strong>Instructions:</strong> Select a room then click a game or chat
         with others. No data sent or received is stored on a server.
       </p>
+      <div style="margin-top: 1rem;">
+        <label for="playerNameInput" style="margin-right: 0.5rem;">Your Name:</label>
+        <input
+          type="text"
+          id="playerNameInput"
+          placeholder="Enter your name..."
+          maxlength="20"
+          style="padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; width: 200px;"
+        />
+        <span id="playerNameDisplay" style="margin-left: 0.5rem; font-weight: bold;"></span>
+      </div>
     </article>
     <div class="container">
       <div id="rooms">
@@ -393,6 +416,10 @@
           <h4>Share this room</h4>
           <div id="qr-code"></div>
           <div id="share-url"></div>
+          <div class="share-buttons">
+            <button id="share-button" type="button">Share Link</button>
+            <button id="copy-button" type="button">Copy Link</button>
+          </div>
         </div>
         <div id="messages"></div>
         <div class="input-group">

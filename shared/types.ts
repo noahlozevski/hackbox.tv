@@ -4,6 +4,19 @@
  */
 
 // ============================================================================
+// Player/Client Types
+// ============================================================================
+
+/**
+ * Player information shared between client and server
+ * Add new player properties here to make them available everywhere
+ */
+export interface PlayerInfo {
+  id: string;
+  name: string;
+}
+
+// ============================================================================
 // WebSocket Message Types
 // ============================================================================
 
@@ -15,13 +28,15 @@ export type ServerMessageType =
   | 'clientLeft'
   | 'message'
   | 'gameStateUpdate' // New: Server-authoritative game state
+  | 'nameUpdated'
   | 'error';
 
 export type ClientMessageType =
   | 'joinRoom'
   | 'leaveRoom'
   | 'message'
-  | 'gameAction'; // New: Game actions
+  | 'gameAction' // New: Game actions
+  | 'updateName';
 
 // Base message structure
 export interface BaseMessage {
@@ -37,6 +52,7 @@ export interface ConnectedMessage extends BaseMessage {
   type: 'connected';
   data: {
     clientId: string;
+    name: string;
   };
 }
 
@@ -44,7 +60,7 @@ export interface RoomsListMessage extends BaseMessage {
   type: 'roomsList';
   data: Array<{
     name: string;
-    clients: string[];
+    clients: PlayerInfo[];
   }>;
 }
 
@@ -52,7 +68,7 @@ export interface JoinedRoomMessage extends BaseMessage {
   type: 'joinedRoom';
   data: {
     room: string;
-    clients: string[];
+    clients: PlayerInfo[];
   };
 }
 
@@ -60,6 +76,7 @@ export interface NewClientMessage extends BaseMessage {
   type: 'newClient';
   data: {
     clientId: string;
+    name: string;
   };
 }
 
@@ -90,6 +107,14 @@ export interface GameStateUpdateMessage extends BaseMessage {
   };
 }
 
+export interface NameUpdatedMessage extends BaseMessage {
+  type: 'nameUpdated';
+  data: {
+    clientId: string;
+    name: string;
+  };
+}
+
 export interface ErrorMessage extends BaseMessage {
   type: 'error';
   data: {
@@ -105,6 +130,7 @@ export type ServerMessage =
   | ClientLeftMessage
   | GameMessage
   | GameStateUpdateMessage
+  | NameUpdatedMessage
   | ErrorMessage;
 
 // ============================================================================
@@ -131,10 +157,18 @@ export interface GameActionRequest extends BaseMessage {
   };
 }
 
+export interface UpdateNameRequest extends BaseMessage {
+  type: 'updateName';
+  data: {
+    name: string;
+  };
+}
+
 export type ClientMessage =
   | JoinRoomRequest
   | LeaveRoomRequest
   | GameActionRequest
+  | UpdateNameRequest
   | GameMessage;
 
 // ============================================================================

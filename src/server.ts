@@ -8,6 +8,7 @@ import type {
   GameAction,
   JoinRoomRequest,
   GameActionRequest,
+  UpdateNameRequest,
 } from '../shared/types';
 import * as MessageBuilder from './message-builder';
 
@@ -34,8 +35,8 @@ wss.on('connection', (websocket: WebSocket) => {
 
   const client = new Client(ws);
   clients.set(ws, client);
-  MessageBuilder.sendConnected(client, client.id);
-  console.log(`New client connected: ${client.id}`);
+  MessageBuilder.sendConnected(client, client.id, client.name);
+  console.log(`New client connected: ${client.id} (${client.name})`);
 
   // Send available rooms to the client
   sendAvailableRooms(client);
@@ -105,6 +106,12 @@ function isGameActionMessage(
   );
 }
 
+function isUpdateNameMessage(
+  message: ClientMessage,
+): message is UpdateNameRequest {
+  return message.type === 'updateName' && typeof message.data?.name === 'string';
+}
+
 function handleMessage(client: Client, message: string) {
   try {
     const parsed = JSON.parse(message) as Partial<ClientMessage> & {
@@ -153,6 +160,14 @@ function handleMessage(client: Client, message: string) {
         handleGameAction(client, parsed.data as GameActionRequest['data']);
         break;
       }
+      case 'updateName': {
+        if (!parsed.data || !isUpdateNameMessage(parsed as ClientMessage)) {
+          MessageBuilder.sendError(client, 'Invalid updateName payload');
+          return;
+        }
+        handleUpdateName(client, parsed.data.name);
+        break;
+      }
       default:
         MessageBuilder.sendError(client, 'Unknown message type');
     }
@@ -174,7 +189,7 @@ function handleJoinRoom(client: Client, roomName: string) {
     MessageBuilder.sendJoinedRoom(client, room.name, room.getClientList());
 
     // Notify other clients in the room
-    MessageBuilder.broadcastNewClient(room, client.id, client);
+    MessageBuilder.broadcastNewClient(room, client.id, client.name, client);
 
     // Send updated room info to the client
     sendAvailableRooms(client);
@@ -208,6 +223,26 @@ function handleDisconnect(client: Client) {
   }
 }
 
+// Handle name updates
+function handleUpdateName(client: Client, name: string) {
+  const trimmedName = name.trim();
+  if (!trimmedName || trimmedName.length > 20) {
+    MessageBuilder.sendError(client, 'Name must be 1-20 characters');
+    return;
+  }
+
+  console.log(`Client ${client.id} changed name from "${client.name}" to "${trimmedName}"`);
+  client.name = trimmedName;
+
+  // Notify the client that the name was updated
+  MessageBuilder.sendNameUpdated(client, client.id, client.name);
+
+  // If client is in a room, notify other clients in the room
+  if (client.room) {
+    MessageBuilder.broadcastNameUpdated(client.room, client.id, client.name, client);
+  }
+}
+
 // Handle game actions (server-authoritative)
 function handleGameAction(
   client: Client,
@@ -222,12 +257,13 @@ function handleGameAction(
 
   // Initialize game if not started
   if (!gameManager.hasActiveGame(client.room.name)) {
-    const players = client.room.getClientList();
-    if (players.length < 2) {
+    const clientList = client.room.getClientList();
+    if (clientList.length < 2) {
       MessageBuilder.sendError(client, 'Need at least 2 players to start');
       return;
     }
-    gameManager.startGame(client.room.name, gameType, players);
+    const playerIds = clientList.map(c => c.id);
+    gameManager.startGame(client.room.name, gameType, playerIds);
   }
 
   // Process action
