@@ -10,9 +10,10 @@ WEB_DIR="/var/www/hackbox_site"
 echo "Clearing old static files..."
 sudo rm -rf "$WEB_DIR"/*
 
-# Copy built client files
+# Copy built client files (preserve directory structure expected by HTML)
 echo "Copying built client files..."
-sudo cp -R "$APP_DIR/site/dist/site/"* "$WEB_DIR/"
+sudo mkdir -p "$WEB_DIR/dist/site"
+sudo cp -R "$APP_DIR/site/dist/site/"* "$WEB_DIR/dist/site/"
 
 # Copy any static HTML/CSS files from site root if they exist
 if [ -f "$APP_DIR/site/index.html" ]; then
