@@ -11,7 +11,10 @@ const gotoOptions = { waitUntil: 'domcontentloaded' as const };
 
 async function waitForRoom(page: Page, room: string) {
   await page.waitForFunction(
-    (expectedRoom) => window.game?.state?.currentRoom === expectedRoom,
+    (expectedRoom) => {
+      const el = document.getElementById('roomName');
+      return el?.textContent?.includes(expectedRoom);
+    },
     {},
     room,
   );
