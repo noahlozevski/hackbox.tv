@@ -26,7 +26,10 @@ Whenever you push changes to the repository, you MUST immediately deploy to the 
 
 ### Deployment Steps:
 ```bash
-# After git push, deploy remotely:
+# After git push, if deploy-local.sh exists (local machine only), use it:
+./deploy-local.sh
+
+# Otherwise, deploy remotely:
 ssh hackbox "cd /home/noahlozevski/app && git pull && ./deploy.sh"
 ```
 
@@ -37,6 +40,8 @@ cd /home/noahlozevski/app
 git pull
 ./deploy.sh
 ```
+
+**Note:** `deploy-local.sh` is gitignored and only exists on the development machine for convenience.
 
 ## Development
 
