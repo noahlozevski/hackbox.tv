@@ -10,14 +10,9 @@ const baseURL = process.env.PW_BASE_URL || 'http://localhost:3000';
 const gotoOptions = { waitUntil: 'domcontentloaded' as const };
 
 async function waitForRoom(page: Page, room: string) {
-  await page.waitForFunction(
-    (expectedRoom) => {
-      const el = document.getElementById('roomName');
-      return el?.textContent?.includes(expectedRoom);
-    },
-    {},
-    room,
-  );
+  const roomHeading = page.locator('#roomName');
+  await expect(roomHeading).toBeVisible();
+  await expect(roomHeading).toContainText(room);
 }
 
 async function joinRoomExplicit(page: Page, room: string) {
