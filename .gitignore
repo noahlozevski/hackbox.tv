@@ -12,3 +12,6 @@ deploy-local.sh
 *.js.map
 *.d.ts
 *.d.ts.map
+
+# Test artifacts
+test-results/
