@@ -84,6 +84,7 @@ export interface Game {
    * Internal marker used to avoid reapplying identical saved state payloads
    */
   _lastSyncedState?: string;
+  _lastSyncedRevision?: number;
 }
 
 // Game registry

@@ -11,6 +11,7 @@ interface ConnectFourState {
   gameOver: boolean;
   isResetting: boolean;
   playerOrder: string[];
+  revision: number;
 }
 
 interface SerializedConnectFourStateBase {
@@ -19,6 +20,7 @@ interface SerializedConnectFourStateBase {
   winnerIndex: 0 | 1 | null;
   gameOver: boolean;
   isResetting: boolean;
+  revision: number;
 }
 
 interface SerializedConnectFourStateV1 extends SerializedConnectFourStateBase {
@@ -150,6 +152,7 @@ function initializeState(): void {
     gameOver: false,
     isResetting: false,
     playerOrder,
+    revision: 0,
   };
 }
 
@@ -453,6 +456,7 @@ function resetBoard(): void {
   state.winner = null;
   state.gameOver = false;
   state.isResetting = false;
+  state.revision = 0;
 
   renderBoard();
   updateStatus();
@@ -530,6 +534,7 @@ function serializeState(): SerializedConnectFourState | null {
     gameOver: currentState.gameOver,
     isResetting: currentState.isResetting,
     playerOrder: order.slice(0, 2),
+    revision: currentState.revision,
   };
 }
 
@@ -555,6 +560,9 @@ function applySerializedState(savedState: unknown): void {
       return seatIndexToPlayerId(cellIndex, currentState.playerOrder);
     }),
   );
+  if (typeof (data as { revision?: unknown }).revision === 'number') {
+    currentState.revision = (data as { revision: number }).revision;
+  }
 
   const fallbackTurn =
     currentState.playerOrder[0] ?? currentState.playerId ?? null;
@@ -578,25 +586,24 @@ function applySerializedState(savedState: unknown): void {
 }
 
 function syncGameStateWithServer(): void {
+  if (!state) return;
+  const previousRevision = state.revision;
+  state.revision += 1;
   const serialized = serializeState();
-  if (!serialized) return;
+  if (!serialized) {
+    state.revision = previousRevision;
+    return;
+  }
 
   window.game.sendMessage('saveGameState', {
     gameId: 'connectFour',
     state: serialized,
   });
 
-  try {
-    const payloadKey = JSON.stringify(serialized);
-    const entry = window.games?.connectFour;
-    if (entry) {
-      entry._lastSyncedState = payloadKey;
-    }
-  } catch {
-    const entry = window.games?.connectFour;
-    if (entry) {
-      entry._lastSyncedState = undefined;
-    }
+  const entry = window.games?.connectFour;
+  if (entry) {
+    entry._lastSyncedRevision = serialized.revision;
+    entry._lastSyncedState = undefined;
   }
 }
 

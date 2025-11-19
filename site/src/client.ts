@@ -163,10 +163,19 @@ window.startGame = async (
   if (savedState && gameEntry.loadState) {
     try {
       gameEntry.loadState(savedState);
-      try {
-        gameEntry._lastSyncedState = JSON.stringify(savedState);
-      } catch {
+      const revision =
+        typeof (savedState as { revision?: unknown }).revision === 'number'
+          ? (savedState as { revision: number }).revision
+          : null;
+      if (revision !== null) {
+        gameEntry._lastSyncedRevision = revision;
         gameEntry._lastSyncedState = undefined;
+      } else {
+        try {
+          gameEntry._lastSyncedState = JSON.stringify(savedState);
+        } catch {
+          gameEntry._lastSyncedState = undefined;
+        }
       }
     } catch (error) {
       console.error('Error loading saved game state:', error);
@@ -189,10 +198,20 @@ window.startGame = async (
             gameId,
             state: initialState,
           });
-          try {
-            gameEntry._lastSyncedState = JSON.stringify(initialState);
-          } catch {
+          const revision =
+            typeof (initialState as { revision?: unknown }).revision ===
+            'number'
+              ? (initialState as { revision: number }).revision
+              : null;
+          if (revision !== null) {
+            gameEntry._lastSyncedRevision = revision;
             gameEntry._lastSyncedState = undefined;
+          } else {
+            try {
+              gameEntry._lastSyncedState = JSON.stringify(initialState);
+            } catch {
+              gameEntry._lastSyncedState = undefined;
+            }
           }
         }
       } catch (error) {
@@ -368,21 +387,37 @@ function handleServerMessage(message: ServerMessage): void {
         ) {
           const gameEntry = window.games?.[room.activeGame];
           if (gameEntry?.loadState) {
-            let incomingStateKey: string | null = null;
-            try {
-              incomingStateKey = JSON.stringify(room.gameState);
-            } catch {
-              incomingStateKey = null;
-            }
+            const revision =
+              typeof (room.gameState as { revision?: unknown }).revision ===
+              'number'
+                ? (room.gameState as { revision: number }).revision
+                : null;
+            let shouldApply = true;
             if (
-              incomingStateKey &&
-              gameEntry._lastSyncedState === incomingStateKey
+              revision !== null &&
+              typeof gameEntry._lastSyncedRevision === 'number' &&
+              revision <= gameEntry._lastSyncedRevision
             ) {
-              // Already applied this payload
-            } else {
+              shouldApply = false;
+            }
+            let incomingStateKey: string | null = null;
+            if (shouldApply && revision === null) {
+              try {
+                incomingStateKey = JSON.stringify(room.gameState);
+                if (incomingStateKey === gameEntry._lastSyncedState) {
+                  shouldApply = false;
+                }
+              } catch {
+                incomingStateKey = null;
+              }
+            }
+            if (shouldApply) {
               try {
                 gameEntry.loadState(room.gameState);
-                if (incomingStateKey) {
+                if (revision !== null) {
+                  gameEntry._lastSyncedRevision = revision;
+                  gameEntry._lastSyncedState = undefined;
+                } else if (incomingStateKey) {
                   gameEntry._lastSyncedState = incomingStateKey;
                 }
               } catch (error) {
