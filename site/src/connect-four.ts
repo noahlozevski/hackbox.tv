@@ -1,9 +1,4 @@
-import type { Game } from './types.js';
-import {
-  getFirstPlayerId,
-  getPlayerIndex,
-  getNextPlayerId,
-} from './player-utils.js';
+import type { Game, PlayerInfo } from './types.js';
 import { showGameContainer, hideGameContainer } from './game-container.js';
 
 type Cell = string | null;
@@ -15,16 +10,29 @@ interface ConnectFourState {
   winner: string | null;
   gameOver: boolean;
   isResetting: boolean;
+  playerOrder: string[];
 }
 
-interface SerializedConnectFourState {
-  version: 1;
+interface SerializedConnectFourStateBase {
   board: (0 | 1 | null)[][];
   currentTurnIndex: 0 | 1 | null;
   winnerIndex: 0 | 1 | null;
   gameOver: boolean;
   isResetting: boolean;
 }
+
+interface SerializedConnectFourStateV1 extends SerializedConnectFourStateBase {
+  version: 1;
+}
+
+interface SerializedConnectFourStateV2 extends SerializedConnectFourStateBase {
+  version: 2;
+  playerOrder: Array<string | null>;
+}
+
+type SerializedConnectFourState =
+  | SerializedConnectFourStateV1
+  | SerializedConnectFourStateV2;
 
 const ROWS = 6;
 const COLS = 7;
@@ -36,7 +44,100 @@ let unsubscribe: (() => void) | null = null;
 let restartTimer: number | null = null;
 
 function canPlay(): boolean {
-  return window.game.players.length === 2;
+  return window.game.players.length >= 2;
+}
+
+function derivePlayerOrder(
+  players: PlayerInfo[],
+  preferredId: string | null,
+): string[] {
+  const order: string[] = [];
+  const roster = [...players];
+  if (preferredId) {
+    const preferred = roster.find((player) => player.id === preferredId);
+    if (preferred) {
+      order.push(preferred.id);
+    }
+  }
+  for (const player of roster) {
+    if (order.length >= 2) break;
+    if (!order.includes(player.id)) {
+      order.push(player.id);
+    }
+  }
+  return order.slice(0, 2);
+}
+
+function resolvePlayerOrder(savedOrder?: Array<string | null>): string[] {
+  const players = window.game.players;
+  if (!savedOrder || savedOrder.length === 0) {
+    return derivePlayerOrder(players, window.game.state.playerId);
+  }
+
+  const resolved = savedOrder.slice(0, 2).map((id) => id ?? null);
+  while (resolved.length < 2) {
+    resolved.push(null);
+  }
+
+  const available = players.map((player) => player.id);
+  for (let i = 0; i < resolved.length; i++) {
+    const candidate = resolved[i];
+    if (!candidate) continue;
+    const idx = available.indexOf(candidate);
+    if (idx !== -1) {
+      available.splice(idx, 1);
+    } else {
+      resolved[i] = null;
+    }
+  }
+
+  for (let i = 0; i < resolved.length; i++) {
+    if (resolved[i]) continue;
+    const replacement = available.shift();
+    if (replacement) {
+      resolved[i] = replacement;
+    }
+  }
+
+  const filtered = resolved.filter(
+    (id): id is string => typeof id === 'string',
+  );
+  if (filtered.length < 2) {
+    const fallback = derivePlayerOrder(players, window.game.state.playerId);
+    return fallback;
+  }
+  return filtered.slice(0, 2);
+}
+
+function seatIndexToPlayerId(
+  index: 0 | 1 | null,
+  order: string[],
+): string | null {
+  if (index !== 0 && index !== 1) return null;
+  return order[index] ?? null;
+}
+
+function playerIdToSeatIndex(
+  playerId: string | null,
+  order: string[],
+): 0 | 1 | null {
+  if (!playerId) return null;
+  const idx = order.indexOf(playerId);
+  return idx === 0 || idx === 1 ? (idx as 0 | 1) : null;
+}
+
+function getPlayerInfo(playerId: string | null): PlayerInfo | undefined {
+  if (!playerId) return undefined;
+  return window.game.players.find((player) => player.id === playerId);
+}
+
+function getNextTurn(order: string[], currentId: string | null): string | null {
+  if (!order.length) return null;
+  const idx = currentId ? order.indexOf(currentId) : -1;
+  if (idx === -1) {
+    return order[0] ?? null;
+  }
+  return order[(idx + 1) % order.length] ?? null;
 }
 
 function start(): void {
@@ -55,14 +156,16 @@ function start(): void {
 
 function initializeState(): void {
   const playerId = window.game.state.playerId;
+  const playerOrder = derivePlayerOrder(window.game.players, playerId);
 
   state = {
     playerId,
     board: Array.from({ length: ROWS }, () => Array<Cell>(COLS).fill(null)),
-    currentTurn: getFirstPlayerId(window.game.players) || playerId,
+    currentTurn: playerOrder[0] ?? playerId,
     winner: null,
     gameOver: false,
     isResetting: false,
+    playerOrder,
   };
 }
 
@@ -112,7 +215,7 @@ function renderUI(): void {
   subtitle.style.fontSize = '13px';
   subtitle.style.color = '#9ca3af';
 
-  const ourIndex = getPlayerIndex(window.game.players, state?.playerId ?? null);
+  const ourIndex = state?.playerOrder.indexOf(state.playerId ?? '') ?? -1;
   const ourColor = ourIndex === 0 ? 'Red' : ourIndex === 1 ? 'Yellow' : null;
 
   subtitle.textContent = ourColor
@@ -120,14 +223,16 @@ function renderUI(): void {
     : 'First to connect four wins.';
   card.appendChild(subtitle);
 
-  if (window.game.players.length >= 2) {
+  if (state?.playerOrder?.length) {
     const playersRow = document.createElement('div');
     playersRow.style.display = 'flex';
     playersRow.style.gap = '12px';
     playersRow.style.margin = '8px 0 10px';
     playersRow.style.fontSize = '13px';
 
-    window.game.players.slice(0, 2).forEach((player, index) => {
+    state.playerOrder.slice(0, 2).forEach((playerId, index) => {
+      const player = getPlayerInfo(playerId);
+      if (!player) return;
       const chip = document.createElement('div');
       chip.style.display = 'flex';
       chip.style.alignItems = 'center';
@@ -156,6 +261,7 @@ function renderUI(): void {
   }
 
   statusLine = document.createElement('p');
+  statusLine.id = 'connect-four-status';
   statusLine.style.margin = '0 0 12px';
   statusLine.style.fontSize = '14px';
   statusLine.style.fontWeight = '500';
@@ -213,8 +319,14 @@ function renderBoard(): void {
 
       const value = state.board[row][col];
       if (value) {
-        const playerIndex = getPlayerIndex(window.game.players, value);
-        cell.style.backgroundColor = playerIndex === 0 ? '#f87171' : '#fbbf24';
+        const seatIndex = state.playerOrder.indexOf(value);
+        if (seatIndex === 0) {
+          cell.style.backgroundColor = '#f87171';
+        } else if (seatIndex === 1) {
+          cell.style.backgroundColor = '#fbbf24';
+        } else {
+          cell.style.backgroundColor = '#60a5fa';
+        }
         cell.style.cursor = 'default';
       }
 
@@ -281,8 +393,8 @@ function makeMove(playerId: string, col: number, row: number): void {
     return;
   }
 
-  const nextPlayer = getNextPlayerId(
-    window.game.players,
+  const nextPlayer = getNextTurn(
+    state.playerOrder,
     state.currentTurn || state.playerId,
   );
   state.currentTurn = nextPlayer;
@@ -340,7 +452,7 @@ function scheduleRestart(): void {
 
   state.isResetting = true;
   restartTimer = window.setTimeout(() => {
-    if (state?.playerId === getFirstPlayerId(window.game.players)) {
+    if (state?.playerId && state.playerOrder[0] === state.playerId) {
       window.game.sendMessage('restart', {});
     }
     resetBoard();
@@ -353,7 +465,7 @@ function resetBoard(): void {
   state.board = Array.from({ length: ROWS }, () =>
     Array<Cell>(COLS).fill(null),
   );
-  state.currentTurn = getFirstPlayerId(window.game.players) || state.playerId;
+  state.currentTurn = state.playerOrder[0] ?? state.playerId;
   state.winner = null;
   state.gameOver = false;
   state.isResetting = false;
@@ -380,8 +492,9 @@ function updateStatus(): void {
   }
 
   const isOurTurn = state.currentTurn === state.playerId;
-  const activeIndex = getPlayerIndex(window.game.players, state.currentTurn);
-  const color = activeIndex === 0 ? 'Red' : 'Yellow';
+  const activeIndex = state.playerOrder.indexOf(state.currentTurn ?? '');
+  const color =
+    activeIndex === 0 ? 'Red' : activeIndex === 1 ? 'Yellow' : 'Neutral';
   statusLine.textContent = isOurTurn
     ? `Your turn (${color})`
     : `Waiting for opponent (${color})`;
@@ -409,66 +522,75 @@ function cleanupOverlay(): void {
 }
 
 function serializeState(): SerializedConnectFourState | null {
-  if (!state) return null;
+  const currentState = state;
+  if (!currentState) return null;
+  if (currentState.playerOrder.length < 2) return null;
 
-  const players = window.game.players;
-  if (players.length < 2) return null;
+  const order = currentState.playerOrder;
 
-  const board = state.board.map((row) =>
+  const board = currentState.board.map((row) =>
     row.map((cell) => {
       if (!cell) return null;
-      const index = getPlayerIndex(players, cell);
-      return index === 0 || index === 1 ? (index as 0 | 1) : null;
+      return playerIdToSeatIndex(cell, order);
     }),
   );
 
-  const currentIndex = getPlayerIndex(players, state.currentTurn);
-  const winnerIndex = getPlayerIndex(players, state.winner);
+  const currentIndex = playerIdToSeatIndex(currentState.currentTurn, order);
+  const winnerIndex = playerIdToSeatIndex(currentState.winner, order);
 
   return {
-    version: 1,
+    version: 2,
     board,
-    currentTurnIndex:
-      currentIndex === 0 || currentIndex === 1 ? (currentIndex as 0 | 1) : null,
-    winnerIndex:
-      winnerIndex === 0 || winnerIndex === 1 ? (winnerIndex as 0 | 1) : null,
-    gameOver: state.gameOver,
-    isResetting: state.isResetting,
+    currentTurnIndex: currentIndex,
+    winnerIndex,
+    gameOver: currentState.gameOver,
+    isResetting: currentState.isResetting,
+    playerOrder: order.slice(0, 2),
   };
 }
 
 function applySerializedState(savedState: unknown): void {
-  if (!state || !savedState) return;
+  const currentState = state;
+  if (!currentState || !savedState) return;
 
   const data = savedState as SerializedConnectFourState;
-  if (data.version !== 1 || !Array.isArray(data.board)) return;
+  if (!Array.isArray(data.board)) return;
 
-  const players = window.game.players;
-  if (players.length < 2) return;
+  const savedOrder =
+    'playerOrder' in data && Array.isArray(data.playerOrder)
+      ? data.playerOrder
+      : undefined;
+  const resolvedOrder = resolvePlayerOrder(savedOrder);
+  currentState.playerOrder = resolvedOrder;
+  if (currentState.playerOrder.length < 2) {
+    currentState.playerOrder = derivePlayerOrder(
+      window.game.players,
+      currentState.playerId,
+    );
+  }
 
-  state.board = data.board.map((row) =>
+  currentState.board = data.board.map((row) =>
     row.map((cellIndex) => {
-      if (cellIndex === 0 || cellIndex === 1) {
-        return players[cellIndex]?.id ?? null;
-      }
-      return null;
+      return seatIndexToPlayerId(cellIndex, currentState.playerOrder);
     }),
   );
 
-  if (data.currentTurnIndex === 0 || data.currentTurnIndex === 1) {
-    state.currentTurn = players[data.currentTurnIndex]?.id ?? null;
-  } else {
-    state.currentTurn = getFirstPlayerId(players) || state.playerId;
-  }
+  const fallbackTurn =
+    currentState.playerOrder[0] ?? currentState.playerId ?? null;
+  const restoredTurn = seatIndexToPlayerId(
+    data.currentTurnIndex,
+    currentState.playerOrder,
+  );
+  currentState.currentTurn = restoredTurn ?? fallbackTurn;
 
-  if (data.winnerIndex === 0 || data.winnerIndex === 1) {
-    state.winner = players[data.winnerIndex]?.id ?? null;
-  } else {
-    state.winner = null;
-  }
+  const restoredWinner = seatIndexToPlayerId(
+    data.winnerIndex,
+    currentState.playerOrder,
+  );
+  currentState.winner = restoredWinner;
 
-  state.gameOver = data.gameOver;
-  state.isResetting = data.isResetting;
+  currentState.gameOver = data.gameOver;
+  currentState.isResetting = data.isResetting;
 
   renderBoard();
   updateStatus();

@@ -1,6 +1,20 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, Page } from '@playwright/test';
 
 const baseURL = process.env.PW_BASE_URL || 'https://hackbox.tv.lozev.ski';
+const gotoOptions = { waitUntil: 'domcontentloaded' as const };
+
+async function joinRoomExplicit(page: Page, room: string) {
+  await page.waitForFunction(
+    () =>
+      typeof window.joinRoom === 'function' &&
+      window.game?.ws?.readyState === WebSocket.OPEN,
+  );
+  await page.evaluate((targetRoom) => {
+    window.joinRoom?.(targetRoom);
+  }, room);
+
+  await expect(page.locator('#roomName')).toContainText(room);
+}
 
 test('Connect Four game state persists across refresh', async ({
   page,
@@ -9,13 +23,15 @@ test('Connect Four game state persists across refresh', async ({
   const roomName = `test-room-${Date.now()}`;
 
   // Player 1 opens the site and joins Room1
-  await page.goto(`${baseURL}?room=${roomName}`);
-  await page.waitForTimeout(500);
+  await page.goto(`${baseURL}?room=${roomName}`, gotoOptions);
+  await joinRoomExplicit(page, roomName);
+  await page.waitForTimeout(200);
 
   // Player 2 joins in a second tab/context
   const page2 = await context.newPage();
-  await page2.goto(`${baseURL}?room=${roomName}`);
-  await page2.waitForTimeout(500);
+  await page2.goto(`${baseURL}?room=${roomName}`, gotoOptions);
+  await joinRoomExplicit(page2, roomName);
+  await page2.waitForTimeout(200);
 
   // Give the sockets a moment so both players are known
   await page.waitForTimeout(1000);
@@ -66,6 +82,8 @@ test('Connect Four game state persists across refresh', async ({
   expect(started).toBeTruthy();
 
   // Give time for Player 2 to auto-start via roomsList sync
+  await page2.goto(`${baseURL}?room=${roomName}`, gotoOptions);
+  await joinRoomExplicit(page2, roomName);
   await page2.waitForTimeout(2500);
 
   // Verify game container is visible for both players
@@ -82,13 +100,17 @@ test('Connect Four game state persists across refresh', async ({
   await expect(colZero).toBeVisible({ timeout: 15_000 });
   await expect(colOne).toBeVisible({ timeout: 15_000 });
   await colZero.click();
-  await colOne.click();
+  await page.waitForTimeout(200);
+  const page2ColOne = page2.locator('#game-container [data-col="1"]').first();
+  await expect(page2ColOne).toBeVisible({ timeout: 15_000 });
+  await page2ColOne.click();
 
   // Give some time for messages and state sync
   await page.waitForTimeout(1000);
 
   // Refresh Player 1 (simulating a page reload)
-  await page.goto(`${baseURL}?room=${roomName}`);
+  await page.goto(`${baseURL}?room=${roomName}`, gotoOptions);
+  await joinRoomExplicit(page, roomName);
   await page.waitForTimeout(2500);
 
   // After reload, Connect Four should auto-start again for Player 1
@@ -98,7 +120,7 @@ test('Connect Four game state persists across refresh', async ({
 
   // And the board should still reflect at least one of the previous moves
   const filledCells = await page
-    .locator('#game-container [data-col="0"]')
+    .locator('#game-container [data-col]')
     .evaluateAll(
       (cells) =>
         cells.filter(
@@ -108,7 +130,10 @@ test('Connect Four game state persists across refresh', async ({
         ).length,
     );
 
-  expect(filledCells).toBeGreaterThan(0);
+  expect(filledCells).toBeGreaterThanOrEqual(2);
+
+  // Turn indicator should still be accurate for the reloaded player
+  await expect(page.locator('#connect-four-status')).toContainText('Your turn');
 
   await page2.close();
 });
