@@ -1,0 +1,4 @@
+User-agent: *
+Disallow:
+
+Sitemap: https://hackbox.tv.lozev.ski/sitemap.xml

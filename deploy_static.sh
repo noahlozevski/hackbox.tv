@@ -20,7 +20,7 @@ if [ -d "$APP_DIR/site/dist/shared" ]; then
   sudo cp -R "$APP_DIR/site/dist/shared" "$WEB_DIR/"
 fi
 
-# Copy any static HTML/CSS/image files from site root if they exist
+# Copy any static HTML/CSS/image/text files from site root if they exist
 if [ -f "$APP_DIR/site/index.html" ]; then
   sudo cp "$APP_DIR/site/"*.html "$WEB_DIR/" 2>/dev/null || true
 fi
@@ -29,9 +29,15 @@ if [ -f "$APP_DIR/site/style.css" ]; then
   sudo cp "$APP_DIR/site/"*.css "$WEB_DIR/" 2>/dev/null || true
 fi
 
-for ext in jpg jpeg png webp gif; do
+for ext in jpg jpeg png webp gif svg ico; do
   if compgen -G "$APP_DIR/site/*.$ext" > /dev/null 2>&1; then
     sudo cp "$APP_DIR/site/"*.$ext "$WEB_DIR/" 2>/dev/null || true
+  fi
+done
+
+for extra in robots.txt sitemap.xml; do
+  if [ -f "$APP_DIR/site/$extra" ]; then
+    sudo cp "$APP_DIR/site/$extra" "$WEB_DIR/" 2>/dev/null || true
   fi
 done
 
