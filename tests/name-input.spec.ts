@@ -28,3 +28,41 @@ test('player name can be saved and cleared', async ({ page }) => {
   // The display label should now be empty (default server name is hidden)
   await expect(nameDisplay).toHaveText('');
 });
+
+test('QR/share URL updates when name changes', async ({ page }) => {
+  await page.goto('/', { waitUntil: 'networkidle' });
+
+  const nameInput = page.locator('#playerNameInput');
+  const saveButton = page.locator('#playerNameSaveButton');
+
+  await expect(nameInput).toBeVisible();
+  await expect(saveButton).toBeVisible();
+
+  // Set an initial name
+  await nameInput.fill('QrUser1');
+  await saveButton.click();
+
+  // Join a default room so that the QR/share UI appears
+  const roomItem = page.getByText('pixel-party');
+  await expect(roomItem).toBeVisible();
+  await roomItem.click();
+
+  const qrContainer = page.locator('#qr-container');
+  const shareUrlEl = page.locator('#share-url');
+
+  await expect(qrContainer).toBeVisible();
+  const firstUrl = (await shareUrlEl.textContent()) ?? '';
+
+  expect(firstUrl).toContain('pixel-party');
+  expect(firstUrl).toContain('QrUser1');
+
+  // Change the name and ensure the share URL updates
+  await nameInput.fill('QrUser2');
+  await saveButton.click();
+
+  await expect
+    .poll(async () => (await shareUrlEl.textContent()) ?? '', {
+      timeout: 5000,
+    })
+    .toContain('QrUser2');
+});
