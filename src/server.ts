@@ -3,7 +3,12 @@ import { Room } from './room';
 import { Client } from './client';
 import { WS } from './types';
 import { GameManager } from './game-manager';
-import type { GameAction } from '../shared/types';
+import type {
+  ClientMessage,
+  GameAction,
+  JoinRoomRequest,
+  GameActionRequest,
+} from '../shared/types';
 import * as MessageBuilder from './message-builder';
 
 // Server setup
@@ -83,19 +88,59 @@ function sendAvailableRooms(client: Client) {
   MessageBuilder.sendRoomsList(client, roomsInfo);
 }
 
+function isJoinRoomMessage(
+  message: ClientMessage,
+): message is JoinRoomRequest {
+  return message.type === 'joinRoom' && typeof message.data?.roomName === 'string';
+}
+
+function isGameActionMessage(
+  message: ClientMessage,
+): message is GameActionRequest {
+  return (
+    message.type === 'gameAction' &&
+    typeof message.data?.gameType === 'string' &&
+    typeof message.data?.action === 'object' &&
+    message.data.action !== null
+  );
+}
+
 function handleMessage(client: Client, message: string) {
   try {
-    const parsedMessage = JSON.parse(message);
-    switch (parsedMessage.type) {
-      case 'joinRoom':
-        handleJoinRoom(client, parsedMessage.data.roomName);
+    const parsed = JSON.parse(message) as Partial<ClientMessage>;
+
+    if (!parsed || typeof parsed !== 'object' || typeof parsed.type !== 'string') {
+      MessageBuilder.sendError(client, 'Invalid message format');
+      return;
+    }
+
+    switch (parsed.type) {
+      case 'joinRoom': {
+        if (!isJoinRoomMessage(parsed as ClientMessage)) {
+          MessageBuilder.sendError(client, 'Invalid joinRoom payload');
+          return;
+        }
+        handleJoinRoom(client, parsed.data.roomName);
         break;
-      case 'message':
-        handleClientMessage(client, parsedMessage.data.message);
+      }
+      case 'message': {
+        if (!parsed.data || typeof (parsed.data as { message?: unknown }).message !== 'string') {
+          MessageBuilder.sendError(client, 'Invalid message payload');
+          return;
+        }
+        const { message: messageContent } = parsed
+          .data as { message: string };
+        handleClientMessage(client, messageContent);
         break;
-      case 'gameAction':
-        handleGameAction(client, parsedMessage.data);
+      }
+      case 'gameAction': {
+        if (!isGameActionMessage(parsed as ClientMessage)) {
+          MessageBuilder.sendError(client, 'Invalid gameAction payload');
+          return;
+        }
+        handleGameAction(client, parsed.data);
         break;
+      }
       default:
         MessageBuilder.sendError(client, 'Unknown message type');
     }

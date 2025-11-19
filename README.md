@@ -61,6 +61,40 @@ npm run build:client
 
 # Run locally
 npm run dev
+
+# Run tests
+npm test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Run linter
+npm run lint
+```
+
+### Testing Policy
+
+**Write tests for critical flows!** All major connection/reconnection logic and message handling should have unit tests.
+
+**Focus on:**
+- WebSocket connection/reconnection flows
+- Message builder utilities (type safety)
+- Room management (join/leave/broadcast)
+- Game state synchronization
+- Client/server message protocol
+
+**Test files location:** `__tests__/` directory (create if needed)
+
+**Example test structure:**
+```typescript
+// __tests__/message-builder.test.ts
+import { sendConnected, broadcastNewClient } from '../src/message-builder';
+
+describe('Message Builder', () => {
+  it('should send typed connected message', () => {
+    // Test type-safe message construction
+  });
+});
 ```
 
 ### Project Structure
@@ -126,20 +160,240 @@ All games on hackbox.tv follow these core principles:
    ```
 6. **Test on mobile**: Load the site on an actual phone to verify touch controls work
 
-## Multiplayer Framework
+## Multiplayer Framework & State Synchronization
 
-Games communicate via a type-safe WebSocket message protocol:
+### Two Synchronization Models
 
+hackbox.tv supports two different approaches to multiplayer game state:
+
+#### 1. **Peer-to-Peer (P2P) Model** - For simple games
+- Each client runs full game logic independently
+- Players broadcast their moves to other players
+- All clients execute the same game rules to stay in sync
+- **Examples**: Connect Four, Rock Paper Scissors, Frogger, Arena Bumpers
+
+#### 2. **Server-Authoritative Model** - For games requiring validation
+- Server is the single source of truth for game state
+- Clients send actions to server, receive validated state updates
+- Prevents cheating and handles complex game logic
+- **Examples**: Tic-Tac-Toe
+
+---
+
+### P2P Game Pattern
+
+**Key APIs:**
 ```typescript
-// Send a game event
+// Subscribe to messages from other players (returns unsubscribe function)
+const unsubscribe = window.game.subscribeToMessages(
+  (playerId: string, event: string, payload: unknown) => {
+    if (event === 'move') {
+      applyMove(playerId, payload);
+    }
+  }
+);
+
+// Send message to all players in room
 window.game.sendMessage('move', { row: 1, col: 2 });
 
-// Receive game events from other players
-window.game.onMessage = (playerId, event, payload) => {
+// Clean up on game stop
+unsubscribe();
+```
+
+**Complete P2P Example:**
+```typescript
+let state: GameState | null = null;
+let unsubscribe: (() => void) | null = null;
+
+function start(): void {
+  // Initialize local state
+  state = initializeState();
+
+  // Subscribe to peer messages
+  unsubscribe = window.game.subscribeToMessages(handleMessage);
+
+  renderUI();
+}
+
+function handleMessage(playerId: string, event: string, payload: unknown): void {
   if (event === 'move') {
-    // Handle the move
+    const move = payload as { row: number; col: number };
+    applyMove(playerId, move);
+    renderUI();
   }
+}
+
+function onPlayerMove(move: Move): void {
+  // Apply locally
+  applyMove(window.game.state.playerId!, move);
+
+  // Broadcast to peers
+  window.game.sendMessage('move', move);
+}
+
+function stop(): void {
+  if (unsubscribe) {
+    unsubscribe();
+    unsubscribe = null;
+  }
+  state = null;
+}
+```
+
+---
+
+### Server-Authoritative Game Pattern
+
+**Key APIs:**
+```typescript
+// Subscribe to game state updates from server (returns unsubscribe function)
+const unsubscribe = window.game.subscribeToGameState(
+  (data: unknown) => {
+    const update = data as { gameType: string; state: YourGameState };
+    if (update.gameType === 'your-game') {
+      currentState = update.state;
+      renderBoard();
+    }
+  }
+);
+
+// Send action to server for validation and state update
+window.game.sendGameAction('your-game', {
+  type: 'move',
+  playerId: window.game.state.playerId,
+  move: { row: 1, col: 2 }
+});
+
+// Clean up on game stop
+unsubscribe();
+```
+
+**Complete Server-Authoritative Example:**
+```typescript
+let currentState: YourGameState | null = null;
+let unsubscribe: (() => void) | null = null;
+
+function start(): void {
+  // Subscribe to server state updates
+  unsubscribe = window.game.subscribeToGameState(handleGameStateUpdate);
+
+  // Request initial state from server
+  window.game.sendGameAction('your-game', {
+    type: 'restart',
+    playerId: window.game.state.playerId
+  });
+
+  renderUI();
+}
+
+function handleGameStateUpdate(data: unknown): void {
+  const update = data as {
+    gameType: string;
+    state: YourGameState;
+    validationError?: string;
+  };
+
+  if (update.gameType !== 'your-game') return;
+
+  if (update.validationError) {
+    showError(update.validationError);
+    return;
+  }
+
+  // Server state is now source of truth
+  currentState = update.state;
+  renderBoard();
+}
+
+function onPlayerMove(move: Move): void {
+  // Send action to server (don't modify local state)
+  window.game.sendGameAction('your-game', {
+    type: 'move',
+    playerId: window.game.state.playerId,
+    move
+  });
+
+  // Wait for server to validate and send back updated state
+}
+
+function stop(): void {
+  if (unsubscribe) {
+    unsubscribe();
+    unsubscribe = null;
+  }
+  currentState = null;
+}
+```
+
+---
+
+### Subscription Model Benefits
+
+The subscription model provides:
+
+1. **Automatic Cleanup**: Unsubscribe function handles restoration of previous handlers
+2. **Composability**: Multiple games can layer subscriptions without conflicts
+3. **Type Safety**: TypeScript ensures correct handler signatures
+4. **Memory Safety**: Prevents handler leaks when games stop
+
+**❌ OLD WAY (Don't do this):**
+```typescript
+let previousOnMessage = window.game.onMessage;
+window.game.onMessage = handleMessage;
+// ... later ...
+window.game.onMessage = previousOnMessage;  // Easy to forget or mess up
+```
+
+**✅ NEW WAY (Always do this):**
+```typescript
+const unsubscribe = window.game.subscribeToMessages(handleMessage);
+// ... later ...
+unsubscribe();  // Simple, safe, guaranteed cleanup
+```
+
+---
+
+### Shared Game Framework APIs
+
+All games have access to these framework features:
+
+```typescript
+// Player information
+window.game.state.playerId      // Your player ID
+window.game.players              // Array of all player IDs in room
+window.game.state.currentRoom    // Current room name
+
+// Message/State APIs (choose based on your model)
+window.game.subscribeToMessages(handler)    // P2P games
+window.game.subscribeToGameState(handler)   // Server-authoritative games
+window.game.sendMessage(event, payload)     // P2P games
+window.game.sendGameAction(gameType, action) // Server-authoritative games
+
+// WebSocket
+window.game.ws                   // WebSocket instance
+
+// Dynamic player handling (optional)
+window.game.handlePlayersChanged = (players: string[]) => {
+  // Called when players join/leave room during gameplay
+  updatePlayerList(players);
 };
 ```
+
+---
+
+### Choosing a Synchronization Model
+
+**Use P2P when:**
+- Game logic is simple and deterministic
+- All players can be trusted (no competitive advantage to cheating)
+- Low latency is critical (no server round-trip)
+- Examples: Turn-based games, cooperative games, casual games
+
+**Use Server-Authoritative when:**
+- Game requires validation (preventing cheating)
+- Game has complex state that's hard to keep in sync
+- Competitive integrity matters
+- Server needs to enforce rules
+- Examples: Competitive games, games with scoring, complex rule validation
 
 All messages are multiplexed over a single WebSocket connection with type safety throughout.

@@ -46,7 +46,7 @@ const input: InputState = {
 let stateSendTimer: number | null = null;
 let lastSentStateAt = 0;
 
-let prevOnMessage: typeof window.game.onMessage | null = null;
+let unsubscribeMessages: (() => void) | null = null;
 let prevOnPlayersChanged: typeof window.game.handlePlayersChanged | null = null;
 
 const WORLD_RADIUS = 1; // arena radius in world units
@@ -462,19 +462,13 @@ function handleResize(): void {
 }
 
 function setupNetworking(): void {
-  prevOnMessage = window.game.onMessage;
   prevOnPlayersChanged = window.game.handlePlayersChanged;
 
-  window.game.onMessage = (playerId, event, payload) => {
+  unsubscribeMessages = window.game.subscribeToMessages((playerId, event, payload) => {
     if (event === NET_EVENT_STATE) {
       handleRemoteState(playerId, payload as NetPlayerState);
-      return;
     }
-
-    if (prevOnMessage) {
-      prevOnMessage(playerId, event, payload);
-    }
-  };
+  });
 
   window.game.handlePlayersChanged = (playersList: string[]) => {
     handlePlayersChanged(playersList);
@@ -492,14 +486,9 @@ function setupNetworking(): void {
 }
 
 function teardownNetworking(): void {
-  if (window.game.onMessage === handleRemoteWrapper) {
-    // no-op; we wrap inline instead
-  }
-
-  if (prevOnMessage) {
-    window.game.onMessage = prevOnMessage;
-  } else {
-    window.game.onMessage = null;
+  if (unsubscribeMessages) {
+    unsubscribeMessages();
+    unsubscribeMessages = null;
   }
 
   if (prevOnPlayersChanged) {
@@ -508,13 +497,13 @@ function teardownNetworking(): void {
     window.game.handlePlayersChanged = null;
   }
 
-  prevOnMessage = null;
+  if (stateSendTimer !== null) {
+    clearInterval(stateSendTimer);
+    stateSendTimer = null;
+  }
+
   prevOnPlayersChanged = null;
 }
-
-// Placeholder used for equality check in teardownNetworking; actual handler is inline.
-
-function handleRemoteWrapper(): void {}
 
 function handlePlayersChanged(playersList: string[]): void {
   const remaining = new Set(playersList);

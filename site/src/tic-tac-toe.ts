@@ -1,7 +1,9 @@
 import type { Game, TicTacToeState, TicTacToeAction } from './types.js';
+import { registerGame } from './game-registry.js';
 
 let originalContent: string;
 let currentState: TicTacToeState | null = null;
+let unsubscribeFromGameState: (() => void) | null = null;
 
 function canPlay(): boolean {
   return window.game.players.length === 2;
@@ -22,8 +24,10 @@ function startGame(): void {
   // Set up game UI
   renderGameUI();
 
-  // Set up state update handler from server
-  window.game.onGameStateUpdate = handleGameStateUpdate;
+  // Subscribe to state updates from server
+  unsubscribeFromGameState = window.game.subscribeToGameState(
+    handleGameStateUpdate,
+  );
 
   // Send initial action to start the game
   const action: TicTacToeAction = {
@@ -232,20 +236,18 @@ function stopGame(): void {
   }
 
   // Clear handler
-  window.game.onGameStateUpdate = null;
+  if (unsubscribeFromGameState) {
+    unsubscribeFromGameState();
+    unsubscribeFromGameState = null;
+  }
 
   console.log('Tic-Tac-Toe stopped!');
 }
 
-// Register the game
 const ticTacToeGame: Game = {
   canPlay,
   start: startGame,
   stop: stopGame,
 };
 
-if (!window.games) {
-  window.games = {};
-}
-
-window.games.ticTacToe = ticTacToeGame;
+registerGame('ticTacToe', ticTacToeGame);

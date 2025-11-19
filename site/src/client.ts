@@ -1,5 +1,6 @@
 import type { GameFramework, GameRegistry, ServerMessage } from './types.js';
 import * as MessageBuilder from './message-builder.js';
+import { ConnectionManager } from './connection-manager.js';
 
 declare global {
   interface Window {
@@ -7,6 +8,8 @@ declare global {
     games: GameRegistry;
   }
 }
+
+const connection = new ConnectionManager();
 
 const game: GameFramework = {
   players: [],
@@ -19,6 +22,30 @@ const game: GameFramework = {
   handlePlayersChanged: null,
   onMessage: null,
   onGameStateUpdate: null,
+
+  subscribeToMessages(listener) {
+    const previous = this.onMessage;
+    this.onMessage = (player, event, payload) => {
+      if (previous) previous(player, event, payload);
+      listener(player, event, payload);
+    };
+
+    return () => {
+      this.onMessage = previous ?? null;
+    };
+  },
+
+  subscribeToGameState(listener) {
+    const previous = this.onGameStateUpdate;
+    this.onGameStateUpdate = (state) => {
+      if (previous) previous(state);
+      listener(state);
+    };
+
+    return () => {
+      this.onGameStateUpdate = previous ?? null;
+    };
+  },
 
   sendMessage(event: string, payload: unknown): void {
     MessageBuilder.sendGameMessage(this.ws, event, payload);
@@ -52,29 +79,14 @@ game.onMessage = function (
 
 window.game = game;
 
-const ws = new WebSocket('wss://hackbox.tv.lozev.ski/ws/');
-game.ws = ws;
+connection.connect('/ws/');
+game.ws = connection.getWebSocket();
 
-ws.addEventListener('open', function () {
-  console.log('Connected to WebSocket server.');
+connection.addMessageListener((message: ServerMessage) => {
+  handleServerMessage(message);
 });
 
-ws.addEventListener('message', function (event) {
-  console.log('Message from server:', event.data);
-  handleServerMessage(event.data);
-});
-
-ws.addEventListener('close', function () {
-  console.log('WebSocket connection closed.');
-});
-
-ws.addEventListener('error', function (event) {
-  console.error('WebSocket error:', event);
-});
-
-function handleServerMessage(data: string): void {
-  try {
-    const message = JSON.parse(data) as ServerMessage;
+function handleServerMessage(message: ServerMessage): void {
     switch (message.type) {
       case 'connected':
         console.log(
@@ -98,7 +110,10 @@ function handleServerMessage(data: string): void {
         }
         break;
       case 'joinedRoom':
-        handleJoinedRoom(message.data.room, message.data.clients);
+        handleJoinedRoom(
+          message.data.room,
+          message.data.clients || [],
+        );
         break;
       case 'newClient':
         handleNewClient(message.data.clientId);
@@ -139,14 +154,8 @@ function handleServerMessage(data: string): void {
         handleError(message.data.error);
         break;
       default:
-        console.warn(
-          'Unknown message type:',
-          (message as { type: string }).type,
-        );
+        console.warn('Unknown message type:', (message as { type: string }).type);
     }
-  } catch (error) {
-    console.error('Error parsing message from server:', error);
-  }
 }
 
 function handleRoomsList(
@@ -168,7 +177,7 @@ function handleRoomsList(
 }
 
 function joinRoom(roomName: string): void {
-  MessageBuilder.sendJoinRoom(ws, roomName);
+  MessageBuilder.sendJoinRoom(connection.getWebSocket(), roomName);
 }
 
 function handleJoinedRoom(roomName: string, clients: string[]): void {

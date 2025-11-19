@@ -1,4 +1,5 @@
-import type { Game, MessageCallback } from './types.js';
+import type { Game } from './types.js';
+import { registerGame } from './game-registry.js';
 
 type Choice = 'rock' | 'paper' | 'scissors';
 
@@ -15,7 +16,7 @@ let statusLine: HTMLParagraphElement | null = null;
 let scoreLine: HTMLDivElement | null = null;
 let choiceSummary: Record<string, HTMLDivElement> = {};
 let resetTimer: number | null = null;
-let previousOnMessage: MessageCallback | null = null;
+let unsubscribeFromMessages: (() => void) | null = null;
 
 function canPlay(): boolean {
   return window.game.players.length === 2;
@@ -27,11 +28,12 @@ function startGame(): void {
     return;
   }
 
-  previousOnMessage = window.game.onMessage;
   initializeState();
   renderUI();
 
-  window.game.onMessage = handleIncomingMessage;
+  unsubscribeFromMessages = window.game.subscribeToMessages(
+    handleIncomingMessage,
+  );
   updateStatus('Choose your move to start the round.');
   updateScores();
   updateChoiceSummary();
@@ -315,11 +317,10 @@ function stopGame(): void {
   state = null;
   choiceSummary = {};
 
-  window.game.onMessage = previousOnMessage
-    ? previousOnMessage
-    : function (player: string, event: string, payload: unknown) {
-        console.log(`Received event [${event}] from player ${player}:`, payload);
-      };
+  if (unsubscribeFromMessages) {
+    unsubscribeFromMessages();
+    unsubscribeFromMessages = null;
+  }
 }
 
 function getOpponentId(): string {
@@ -333,8 +334,4 @@ const rockPaperScissorsGame: Game = {
   stop: stopGame,
 };
 
-if (!window.games) {
-  window.games = {};
-}
-
-window.games.rockPaperScissors = rockPaperScissorsGame;
+registerGame('rockPaperScissors', rockPaperScissorsGame);

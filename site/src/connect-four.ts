@@ -1,4 +1,4 @@
-import type { Game, MessageCallback } from './types.js';
+import type { Game } from './types.js';
 
 type Cell = string | null;
 
@@ -18,7 +18,7 @@ let state: ConnectFourState | null = null;
 let overlay: HTMLDivElement | null = null;
 let boardContainer: HTMLDivElement | null = null;
 let statusLine: HTMLParagraphElement | null = null;
-let previousOnMessage: MessageCallback | null = null;
+let unsubscribe: (() => void) | null = null;
 let restartTimer: number | null = null;
 
 function canPlay(): boolean {
@@ -31,11 +31,10 @@ function start(): void {
     return;
   }
 
-  previousOnMessage = window.game.onMessage;
   initializeState();
   renderUI();
 
-  window.game.onMessage = handleMessage;
+  unsubscribe = window.game.subscribeToMessages(handleMessage);
   updateStatus();
 }
 
@@ -318,14 +317,13 @@ function stop(): void {
     restartTimer = null;
   }
 
+  if (unsubscribe) {
+    unsubscribe();
+    unsubscribe = null;
+  }
+
   cleanupOverlay();
   state = null;
-
-  window.game.onMessage =
-    previousOnMessage ??
-    function (player: string, event: string, payload: unknown): void {
-      console.log(`Received event [${event}] from player ${player}:`, payload);
-    };
 }
 
 function cleanupOverlay(): void {

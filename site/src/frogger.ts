@@ -1,4 +1,4 @@
-import type { Game, MessageCallback } from './types.js';
+import type { Game } from './types.js';
 
 type LaneType = 'goal' | 'water' | 'safe' | 'road' | 'start';
 
@@ -44,7 +44,7 @@ interface FroggerState {
   lastTime: number;
   animationId: number | null;
   styleEl: HTMLStyleElement;
-  previousOnMessage: MessageCallback | null;
+  unsubscribe: (() => void) | null;
   resizeHandler: () => void;
 }
 
@@ -330,11 +330,9 @@ function start(): void {
     lastTime: performance.now(),
     animationId: null,
     styleEl,
-    previousOnMessage: window.game.onMessage,
+    unsubscribe: window.game.subscribeToMessages(() => {}),
     resizeHandler: () => {},
   };
-
-  window.game.onMessage = () => {};
 
   const resizeHandler = () => updateCanvasSize();
   state.resizeHandler = resizeHandler;
@@ -364,15 +362,15 @@ function start(): void {
 function stop(): void {
   if (!state) return;
 
-  const { host, styleEl, animationId, previousOnMessage, resizeHandler } =
+  const { host, styleEl, animationId, unsubscribe, resizeHandler } =
     state;
   state.running = false;
   if (animationId) cancelAnimationFrame(animationId);
+  if (unsubscribe) unsubscribe();
   window.removeEventListener('keydown', handleInput);
   window.removeEventListener('resize', resizeHandler);
   if (host.parentElement) host.remove();
   if (styleEl.parentElement) styleEl.remove();
-  window.game.onMessage = previousOnMessage;
   state = null;
 }
 
