@@ -123,7 +123,7 @@ window.startGame = async (gameId: string): Promise<void> => {
 };
 
 // Default handlers
-game.handlePlayersChanged = function (players: PlayerInfo[]): void {
+export function defaultHandlePlayersChanged(players: PlayerInfo[]): void {
   console.log('Players changed: ', players);
   game.players = players;
 
@@ -136,7 +136,9 @@ game.handlePlayersChanged = function (players: PlayerInfo[]): void {
   }
 
   updateGamesList();
-};
+}
+
+game.handlePlayersChanged = defaultHandlePlayersChanged;
 
 game.onMessage = function (
   player: string,
@@ -194,11 +196,15 @@ function handleServerMessage(message: ServerMessage): void {
       // Update the client list if we are in a room
       if (game.state.currentRoom) {
         const room = message.data.find(
-          (room: { name: string; clients: Array<{ id: string; name: string }> }) =>
-            room.name === game.state.currentRoom,
+          (room: {
+            name: string;
+            clients: Array<{ id: string; name: string }>;
+          }) => room.name === game.state.currentRoom,
         );
         if (room && game.handlePlayersChanged) {
-          game.handlePlayersChanged(room.clients.sort((a, b) => a.id.localeCompare(b.id)));
+          game.handlePlayersChanged(
+            room.clients.sort((a, b) => a.id.localeCompare(b.id)),
+          );
         }
       }
       break;
@@ -217,7 +223,10 @@ function handleServerMessage(message: ServerMessage): void {
       handleNewClient(message.data.clientId, message.data.name);
       if (game.handlePlayersChanged) {
         game.handlePlayersChanged(
-          [...game.players, { id: message.data.clientId, name: message.data.name }].sort((a, b) => a.id.localeCompare(b.id)),
+          [
+            ...game.players,
+            { id: message.data.clientId, name: message.data.name },
+          ].sort((a, b) => a.id.localeCompare(b.id)),
         );
       }
       break;
@@ -285,7 +294,10 @@ function joinRoom(roomName: string): void {
   MessageBuilder.sendJoinRoom(connection.getWebSocket(), roomName);
 }
 
-function handleJoinedRoom(roomName: string, clients: Array<{ id: string; name: string }>): void {
+function handleJoinedRoom(
+  roomName: string,
+  clients: Array<{ id: string; name: string }>,
+): void {
   game.state.currentRoom = roomName;
   connection.setLastRoom(roomName);
   const roomNameEl = document.getElementById('roomName');
@@ -311,7 +323,9 @@ function handleJoinedRoom(roomName: string, clients: Array<{ id: string; name: s
   // Initialize game.players with the current clients in the room
   if (game.handlePlayersChanged) {
     game.handlePlayersChanged(
-      clients.map(c => ({ id: c.id, name: c.name })).sort((a, b) => a.id.localeCompare(b.id))
+      clients
+        .map((c) => ({ id: c.id, name: c.name }))
+        .sort((a, b) => a.id.localeCompare(b.id)),
     );
   }
 }

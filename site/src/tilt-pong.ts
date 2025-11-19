@@ -1,5 +1,11 @@
-import type { Game, MessageCallback, PlayersChangedCallback, PlayerInfo } from './types.js';
+import type {
+  Game,
+  MessageCallback,
+  PlayersChangedCallback,
+  PlayerInfo,
+} from './types.js';
 import { getPlayerIds } from './player-utils.js';
+import { defaultHandlePlayersChanged } from './client.js';
 
 type Edge = 'top' | 'right' | 'bottom' | 'left';
 
@@ -555,11 +561,8 @@ function teardownNetworking(): void {
     window.game.onMessage = null;
   }
 
-  if (prevOnPlayersChanged) {
-    window.game.handlePlayersChanged = prevOnPlayersChanged;
-  } else {
-    window.game.handlePlayersChanged = null;
-  }
+  window.game.handlePlayersChanged =
+    prevOnPlayersChanged ?? defaultHandlePlayersChanged;
 
   prevOnMessage = null;
   prevOnPlayersChanged = null;

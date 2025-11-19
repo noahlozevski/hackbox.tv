@@ -1,5 +1,6 @@
 import type { Game, PlayerInfo } from './types.js';
 import { getPlayerIds } from './player-utils.js';
+import { defaultHandlePlayersChanged } from './client.js';
 
 interface NetMarbleState {
   x: number;
@@ -575,11 +576,8 @@ function teardownNetworking(): void {
     unsubscribeMessages = null;
   }
 
-  if (prevOnPlayersChanged) {
-    window.game.handlePlayersChanged = prevOnPlayersChanged;
-  } else {
-    window.game.handlePlayersChanged = null;
-  }
+  window.game.handlePlayersChanged =
+    prevOnPlayersChanged ?? defaultHandlePlayersChanged;
   prevOnPlayersChanged = null;
 
   if (stateSendTimer !== null) {

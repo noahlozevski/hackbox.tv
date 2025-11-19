@@ -1,5 +1,6 @@
 import type { Game, PlayerInfo } from './types.js';
 import { getPlayerIds } from './player-utils.js';
+import { defaultHandlePlayersChanged } from './client.js';
 
 interface NetPlayerState {
   x: number;
@@ -465,11 +466,13 @@ function handleResize(): void {
 function setupNetworking(): void {
   prevOnPlayersChanged = window.game.handlePlayersChanged;
 
-  unsubscribeMessages = window.game.subscribeToMessages((playerId, event, payload) => {
-    if (event === NET_EVENT_STATE) {
-      handleRemoteState(playerId, payload as NetPlayerState);
-    }
-  });
+  unsubscribeMessages = window.game.subscribeToMessages(
+    (playerId, event, payload) => {
+      if (event === NET_EVENT_STATE) {
+        handleRemoteState(playerId, payload as NetPlayerState);
+      }
+    },
+  );
 
   window.game.handlePlayersChanged = (playersList) => {
     handlePlayersChanged(playersList);
@@ -492,11 +495,8 @@ function teardownNetworking(): void {
     unsubscribeMessages = null;
   }
 
-  if (prevOnPlayersChanged) {
-    window.game.handlePlayersChanged = prevOnPlayersChanged;
-  } else {
-    window.game.handlePlayersChanged = null;
-  }
+  window.game.handlePlayersChanged =
+    prevOnPlayersChanged ?? defaultHandlePlayersChanged;
 
   if (stateSendTimer !== null) {
     clearInterval(stateSendTimer);

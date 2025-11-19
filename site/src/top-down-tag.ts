@@ -6,6 +6,7 @@ import type {
 } from './types.js';
 import { getPlayerIds, getFirstPlayerId } from './player-utils.js';
 import { registerGame } from './game-registry.js';
+import { defaultHandlePlayersChanged } from './client.js';
 
 interface NetPlayerState {
   x: number;
@@ -317,9 +318,7 @@ function createUI(): void {
 
   backdropEl = backdrop;
 
-  const canvas = frame.querySelector<HTMLCanvasElement>(
-    '#top-down-tag-canvas',
-  );
+  const canvas = frame.querySelector<HTMLCanvasElement>('#top-down-tag-canvas');
   canvasEl = canvas;
   if (canvasEl) {
     const ctx2d = canvasEl.getContext('2d');
@@ -336,9 +335,8 @@ function createUI(): void {
     });
   });
 
-  const controlButtons = frame.querySelectorAll<HTMLButtonElement>(
-    '.tag-control-btn',
-  );
+  const controlButtons =
+    frame.querySelectorAll<HTMLButtonElement>('.tag-control-btn');
 
   controlButtons.forEach((btn) => {
     const dir = btn.dataset.tagDir;
@@ -379,10 +377,7 @@ function setupPlayers(): void {
     const cellHeight = (WORLD_HEIGHT - safeMarginY * 2) / rows;
 
     const startX =
-      -WORLD_WIDTH / 2 +
-      safeMarginX +
-      cellWidth * colIndex +
-      cellWidth * 0.5;
+      -WORLD_WIDTH / 2 + safeMarginX + cellWidth * colIndex + cellWidth * 0.5;
     const startY =
       -WORLD_HEIGHT / 2 +
       safeMarginY +
@@ -408,7 +403,9 @@ function setupPlayers(): void {
   });
 
   updateHud();
-  updateStatusText('Move with WASD or arrows. If you are IT, chase and tag someone!');
+  updateStatusText(
+    'Move with WASD or arrows. If you are IT, chase and tag someone!',
+  );
 }
 
 function generateColorPalette(count: number): string[] {
@@ -532,11 +529,8 @@ function teardownNetworking(): void {
     window.game.onMessage = null;
   }
 
-  if (prevOnPlayersChanged) {
-    window.game.handlePlayersChanged = prevOnPlayersChanged;
-  } else {
-    window.game.handlePlayersChanged = null;
-  }
+  window.game.handlePlayersChanged =
+    prevOnPlayersChanged ?? defaultHandlePlayersChanged;
 
   prevOnMessage = null;
   prevOnPlayersChanged = null;
@@ -570,10 +564,7 @@ function handlePlayersChanged(playersList: PlayerInfo[]): void {
       const cellHeight = (WORLD_HEIGHT - safeMarginY * 2) / rows;
 
       const startX =
-        -WORLD_WIDTH / 2 +
-        safeMarginX +
-        cellWidth * colIndex +
-        cellWidth * 0.5;
+        -WORLD_WIDTH / 2 + safeMarginX + cellWidth * colIndex + cellWidth * 0.5;
       const startY =
         -WORLD_HEIGHT / 2 +
         safeMarginY +
@@ -702,8 +693,7 @@ function update(dt: number): void {
   moveX /= length;
   moveY /= length;
 
-  const speed =
-    BASE_SPEED * (local.isIt ? IT_SPEED_MULTIPLIER : 1);
+  const speed = BASE_SPEED * (local.isIt ? IT_SPEED_MULTIPLIER : 1);
 
   local.vx = moveX * speed;
   local.vy = moveY * speed;
@@ -818,9 +808,7 @@ function render(): void {
     WORLD_HEIGHT,
   );
 
-  const sorted = [...players.values()].sort((a, b) =>
-    a.id.localeCompare(b.id),
-  );
+  const sorted = [...players.values()].sort((a, b) => a.id.localeCompare(b.id));
 
   for (const player of sorted) {
     ctx.save();
@@ -863,4 +851,3 @@ const topDownTagGame: Game = {
 };
 
 registerGame('topDownTag', topDownTagGame);
-
