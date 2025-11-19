@@ -155,7 +155,13 @@ test('Connect Four game state persists across refresh', async ({
   expect(filledCells).toBeGreaterThanOrEqual(2);
 
   // Turn indicator should still be accurate for the reloaded player
-  await expect(page.locator('#connect-four-status')).toContainText('Your turn');
+  const shouldHaveTurn = isLocalFirst;
+  const finalStatus = page.locator('#connect-four-status');
+  if (shouldHaveTurn) {
+    await expect(finalStatus).toContainText('Your turn');
+  } else {
+    await expect(finalStatus).toContainText('Waiting for opponent');
+  }
 
   await page2.close();
 });
