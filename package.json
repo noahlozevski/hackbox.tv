@@ -12,6 +12,7 @@
     "dev": "ts-node src/server.ts",
     "test": "tsx node_modules/.bin/vitest run",
     "test:watch": "tsx node_modules/.bin/vitest",
+    "test:e2e": "HACKBOX_E2E=1 tsx node_modules/.bin/vitest run src/connection.e2e.test.ts",
     "test:site": "curl -f -s -o /dev/null -w '%{http_code}' https://hackbox.tv.lozev.ski/ | grep -q 200 && echo 'Site is online' || (echo 'Site is offline' && exit 1)",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
