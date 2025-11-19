@@ -19,6 +19,14 @@ describe('site Open Graph metadata', () => {
     expect(html).toMatch(
       /property="og:url"[\s\S]*https:\/\/hackbox\.tv\.lozev\.ski\//,
     );
+    expect(html).toMatch(/property="og:site_name"[\s\S]*hackbox\.tv/);
+    expect(html).toMatch(/property="og:locale"[\s\S]*en_US/);
+    expect(html).toMatch(
+      /property="og:image:alt"[\s\S]*browser-based party games and chat/,
+    );
+    expect(html).toMatch(
+      /property="og:image:width"[\s\S]*1200[\s\S]*property="og:image:height"[\s\S]*630/,
+    );
     expect(html).toMatch(/name="twitter:card"[\s\S]*summary_large_image/);
     expect(html).toMatch(
       /name="twitter:title"[\s\S]*hackbox\.tv – realtime browser games with friends/,
