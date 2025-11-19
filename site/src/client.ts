@@ -263,6 +263,7 @@ function handleServerMessage(message: ServerMessage): void {
       }
       break;
     case 'error':
+      console.error('Server error:', message.data.error);
       handleError(message.data.error);
       break;
     default:

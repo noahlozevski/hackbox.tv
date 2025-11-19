@@ -109,7 +109,9 @@ function isGameActionMessage(
 function isUpdateNameMessage(
   message: ClientMessage,
 ): message is UpdateNameRequest {
-  return message.type === 'updateName' && typeof message.data?.name === 'string';
+  return (
+    message.type === 'updateName' && typeof message.data?.name === 'string'
+  );
 }
 
 function handleMessage(client: Client, message: string) {
@@ -169,6 +171,10 @@ function handleMessage(client: Client, message: string) {
         break;
       }
       default:
+        console.error(
+          `Unknown message type from client ${client.id}:`,
+          JSON.stringify(parsed, null, 2),
+        );
         MessageBuilder.sendError(client, 'Unknown message type');
     }
   } catch (error) {
@@ -231,7 +237,9 @@ function handleUpdateName(client: Client, name: string) {
     return;
   }
 
-  console.log(`Client ${client.id} changed name from "${client.name}" to "${trimmedName}"`);
+  console.log(
+    `Client ${client.id} changed name from "${client.name}" to "${trimmedName}"`,
+  );
   client.name = trimmedName;
 
   // Notify the client that the name was updated
@@ -239,7 +247,12 @@ function handleUpdateName(client: Client, name: string) {
 
   // If client is in a room, notify other clients in the room
   if (client.room) {
-    MessageBuilder.broadcastNameUpdated(client.room, client.id, client.name, client);
+    MessageBuilder.broadcastNameUpdated(
+      client.room,
+      client.id,
+      client.name,
+      client,
+    );
   }
 }
 
@@ -262,7 +275,7 @@ function handleGameAction(
       MessageBuilder.sendError(client, 'Need at least 2 players to start');
       return;
     }
-    const playerIds = clientList.map(c => c.id);
+    const playerIds = clientList.map((c) => c.id);
     gameManager.startGame(client.room.name, gameType, playerIds);
   }
 
