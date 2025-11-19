@@ -35,47 +35,45 @@ export function handleNameUpdated(
 
 export function updatePlayerNameDisplay(game: GameFramework): void {
   const nameDisplay = document.getElementById('playerNameDisplay');
-  if (nameDisplay && game.state.playerName) {
-    nameDisplay.textContent = game.state.playerName;
-  }
-
   const nameInput = document.getElementById(
     'playerNameInput',
   ) as HTMLInputElement;
-  if (nameInput && game.state.playerName) {
-    nameInput.value = game.state.playerName;
+
+  const playerId = game.state.playerId;
+  const currentName = game.state.playerName ?? '';
+  const defaultName = playerId ? `Player ${playerId.slice(0, 4)}` : '';
+  const isDefaultName = !currentName || currentName === defaultName;
+
+  if (nameDisplay) {
+    nameDisplay.textContent = isDefaultName ? '' : currentName;
+  }
+
+  // Only overwrite the input when we have an explicit, non-default name.
+  if (nameInput && !isDefaultName && currentName) {
+    nameInput.value = currentName;
   }
 }
 
 export function initializeNameInput(game: GameFramework): void {
-  let nameUpdateTimeout: ReturnType<typeof setTimeout> | null = null;
-
   const playerNameInput = document.getElementById(
     'playerNameInput',
   ) as HTMLInputElement;
-  if (!playerNameInput) return;
+  const saveButton = document.getElementById(
+    'playerNameSaveButton',
+  ) as HTMLButtonElement | null;
+  if (!playerNameInput || !saveButton) return;
 
-  const debouncedUpdateName = () => {
-    if (nameUpdateTimeout) {
-      clearTimeout(nameUpdateTimeout);
-    }
-    nameUpdateTimeout = setTimeout(() => {
-      const newName = playerNameInput.value.trim();
-      if (newName && newName !== game.state.playerName) {
-        game.updateName(newName);
-        localStorage.setItem('playerName', newName);
-      }
-    }, 500);
-  };
-
-  playerNameInput.addEventListener('input', debouncedUpdateName);
-
-  playerNameInput.addEventListener('blur', () => {
-    if (nameUpdateTimeout) {
-      clearTimeout(nameUpdateTimeout);
-    }
+  saveButton.addEventListener('click', () => {
     const newName = playerNameInput.value.trim();
-    if (newName && newName !== game.state.playerName) {
+
+    if (!newName) {
+      // Clear any saved custom name and ask the server to reset to default.
+      localStorage.removeItem('playerName');
+      game.updateName('');
+      return;
+    }
+
+    if (newName !== game.state.playerName) {
       game.updateName(newName);
       localStorage.setItem('playerName', newName);
     }

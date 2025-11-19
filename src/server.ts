@@ -359,15 +359,24 @@ function handleDisconnect(client: Client) {
 // Handle name updates
 function handleUpdateName(client: Client, name: string) {
   const trimmedName = name.trim();
-  if (!trimmedName || trimmedName.length > 20) {
-    MessageBuilder.sendError(client, 'Name must be 1-20 characters');
-    return;
+  const defaultName = `Player ${client.id.slice(0, 4)}`;
+
+  let nextName: string;
+  if (!trimmedName) {
+    // Empty input "unsets" the custom name and resets to the default label.
+    nextName = defaultName;
+  } else {
+    if (trimmedName.length > 20) {
+      MessageBuilder.sendError(client, 'Name must be 1-20 characters');
+      return;
+    }
+    nextName = trimmedName;
   }
 
   console.log(
-    `Client ${client.id} changed name from "${client.name}" to "${trimmedName}"`,
+    `Client ${client.id} changed name from "${client.name}" to "${nextName}"`,
   );
-  client.name = trimmedName;
+  client.name = nextName;
 
   // Notify the client that the name was updated
   MessageBuilder.sendNameUpdated(client, client.id, client.name);
