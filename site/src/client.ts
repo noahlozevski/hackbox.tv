@@ -88,6 +88,8 @@ const gameModuleLoaders: Record<string, () => Promise<unknown>> = {
   ticTacToe: () => import('./tic-tac-toe.js'),
   rockPaperScissors: () => import('./rock-paper-scissors.js'),
   lightcycle: () => import('./lightcycle.js'),
+  // Hidden test game, only started via ?game=e2eTest
+  e2eTest: () => import('./e2e-test-game.js'),
 };
 
 window.startGame = async (gameId: string): Promise<void> => {
