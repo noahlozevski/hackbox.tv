@@ -9,10 +9,10 @@ describe('share page HTML generator', () => {
       gameId: null,
     });
 
-    expect(html).toContain('Join room Room42 on hackbox.tv');
     expect(html).toContain('content="https://example.com/share/Room42"');
     expect(html).toContain('https://example.com/?room=Room42');
     expect(html).toContain('property="og:title"');
+    expect(html).toContain('Room42');
     expect(html).toContain('name="twitter:card" content="summary_large_image"');
   });
 
@@ -23,7 +23,6 @@ describe('share page HTML generator', () => {
       gameId: 'ticTacToe',
     });
 
-    expect(html).toContain('Join Tic-Tac-Toe in MainRoom on hackbox.tv');
     expect(html).toContain(
       'content="https://example.com/share/MainRoom/ticTacToe"',
     );
@@ -31,6 +30,8 @@ describe('share page HTML generator', () => {
       'https://example.com/?room=MainRoom&amp;game=ticTacToe',
     );
     expect(html).toContain('property="og:title"');
+    expect(html).toContain('Tic-Tac-Toe');
+    expect(html).toContain('MainRoom');
     expect(html).toContain('name="twitter:title"');
   });
 });

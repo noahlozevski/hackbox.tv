@@ -15,12 +15,17 @@ export interface SharePageOptions {
   origin?: string;
   roomName: string;
   gameId?: string | null;
+  playerName?: string | null;
 }
 
 export function buildSharePageHtml(options: SharePageOptions): string {
   const origin = options.origin ?? DEFAULT_ORIGIN;
   const roomName = options.roomName;
   const gameId = options.gameId ?? null;
+  const playerName =
+    typeof options.playerName === 'string' && options.playerName.trim()
+      ? options.playerName
+      : null;
 
   const encodedRoom = encodeURIComponent(roomName);
   const encodedGame = gameId ? encodeURIComponent(gameId) : null;
@@ -42,13 +47,8 @@ export function buildSharePageHtml(options: SharePageOptions): string {
         ? gameId
         : null;
 
-  const title = gameLabel
-    ? `Join ${gameLabel} in ${roomName} on hackbox.tv`
-    : `Join room ${roomName} on hackbox.tv`;
-
-  const description = gameLabel
-    ? `Room “${roomName}” is running ${gameLabel} on hackbox.tv. Drop in and help stress‑test the hackbox.`
-    : `Jump into room “${roomName}” on hackbox.tv to chat and spin up chaotic realtime games in your browser.`;
+  const title = buildTitle({ roomName, gameLabel, playerName });
+  const description = buildDescription({ roomName, gameLabel, playerName });
 
   const baseImageUrl = `${origin}/og_image.jpg`;
 
@@ -101,6 +101,100 @@ export function buildSharePageHtml(options: SharePageOptions): string {
     '</html>',
     '',
   ].join('\n');
+}
+
+function buildTitle(input: {
+  roomName: string;
+  gameLabel: string | null;
+  playerName: string | null;
+}): string {
+  const { roomName, gameLabel, playerName } = input;
+  const baseRoom = roomName || 'a room';
+
+  if (gameLabel) {
+    if (playerName) {
+      const templates = [
+        `${playerName} opened ${gameLabel} in ${baseRoom}`,
+        `${playerName} wants you in ${baseRoom} · ${gameLabel}`,
+        `${gameLabel} with ${playerName} in ${baseRoom}`,
+      ];
+      return templates[
+        hashIndex(`${playerName}|${baseRoom}|${gameLabel}`, templates.length)
+      ];
+    }
+    const templates = [
+      `${gameLabel} chaos in ${baseRoom}`,
+      `Drop into ${baseRoom} · ${gameLabel}`,
+      `${gameLabel} lobby: ${baseRoom}`,
+    ];
+    return templates[hashIndex(`${baseRoom}|${gameLabel}`, templates.length)];
+  }
+
+  if (playerName) {
+    const templates = [
+      `${playerName} opened room ${baseRoom}`,
+      `Hang with ${playerName} in ${baseRoom}`,
+    ];
+    return templates[hashIndex(`${playerName}|${baseRoom}`, templates.length)];
+  }
+
+  return `Room ${baseRoom} on hackbox.tv`;
+}
+
+function buildDescription(input: {
+  roomName: string;
+  gameLabel: string | null;
+  playerName: string | null;
+}): string {
+  const { roomName, gameLabel, playerName } = input;
+  const baseRoom = roomName || 'this room';
+
+  if (gameLabel) {
+    if (playerName) {
+      const templates = [
+        `${playerName} is running ${gameLabel} in “${baseRoom}”. Tap in, make it weird.`,
+        `“${baseRoom}” is live with ${gameLabel} and ${playerName}. Join and mash buttons.`,
+      ];
+      return templates[
+        hashIndex(
+          `${playerName}|${baseRoom}|${gameLabel}|desc`,
+          templates.length,
+        )
+      ];
+    }
+    const templates = [
+      `${gameLabel} is live in “${baseRoom}”. Join and add to the chaos.`,
+      `Room “${baseRoom}” is playing ${gameLabel} on hackbox.tv. Drop in and see what happens.`,
+    ];
+    return templates[
+      hashIndex(`${baseRoom}|${gameLabel}|desc`, templates.length)
+    ];
+  }
+
+  if (playerName) {
+    const templates = [
+      `${playerName} spun up room “${baseRoom}” on hackbox.tv. Join, chat, and start something silly.`,
+      `Room “${baseRoom}” is open with ${playerName}. Hop in and pick a game.`,
+    ];
+    return templates[
+      hashIndex(`${playerName}|${baseRoom}|desc`, templates.length)
+    ];
+  }
+
+  const templates = [
+    `Room “${baseRoom}” on hackbox.tv. Join, chat, and spin up browser games.`,
+    `Jump into room “${baseRoom}” on hackbox.tv for quick, chaotic mini games.`,
+  ];
+  return templates[hashIndex(`${baseRoom}|desc`, templates.length)];
+}
+
+function hashIndex(key: string, modulo: number): number {
+  let hash = 0;
+  for (let i = 0; i < key.length; i += 1) {
+    hash = (hash * 31 + key.charCodeAt(i)) | 0;
+  }
+  const normalized = Math.abs(hash);
+  return modulo === 0 ? 0 : normalized % modulo;
 }
 
 function escapeHtml(value: string): string {

@@ -64,6 +64,8 @@ const shareServer = http.createServer((req, res) => {
     origin: PUBLIC_ORIGIN,
     roomName,
     gameId,
+    // Optional: include inviter name when present in the URL
+    playerName: url.searchParams.get('name') ?? undefined,
   });
 
   res.statusCode = 200;
@@ -80,12 +82,6 @@ shareServer.listen(SHARE_PORT, HOST, () => {
 const rooms: Map<string, Room> = new Map();
 const clients: Map<WS, Client> = new Map();
 const gameManager = new GameManager();
-
-// Hardcoded list of rooms
-const roomNames = ['Room1', 'Room2', 'Room3'];
-roomNames.forEach((roomName) => {
-  rooms.set(roomName, new Room(roomName));
-});
 
 function getOrCreateRoom(roomName: string): Room | null {
   const sanitized = roomName.trim();

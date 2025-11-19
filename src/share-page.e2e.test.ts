@@ -34,6 +34,25 @@ function fetchHtml(url: string): Promise<string> {
   });
 }
 
+function fetchAssetHeaders(
+  url: string,
+): Promise<{ statusCode: number; contentType: string | undefined }> {
+  return new Promise((resolve, reject) => {
+    https
+      .get(url, (res) => {
+        const { statusCode } = res;
+        const contentType = res.headers['content-type'] as string | undefined;
+        if (!statusCode) {
+          reject(new Error('Missing status code'));
+          return;
+        }
+        // We only care that the asset is reachable and looks like an image.
+        resolve({ statusCode, contentType });
+      })
+      .on('error', reject);
+  });
+}
+
 describe('Prod Share Page E2E', () => {
   it('serves room-only OG metadata for share URL', async () => {
     const html = await fetchHtml(ROOM_ONLY_URL);
@@ -45,6 +64,15 @@ describe('Prod Share Page E2E', () => {
     expect(html).toContain(
       `${SHARE_ORIGIN}/?room=${encodeURIComponent(SHARE_ROOM)}`,
     );
+    const ogImageMatch = html.match(
+      /<meta\s+property="og:image"\s+content="([^"]+)"/,
+    );
+    expect(ogImageMatch).not.toBeNull();
+    const ogImageUrl = ogImageMatch?.[1] ?? '';
+    expect(ogImageUrl.startsWith(SHARE_ORIGIN)).toBe(true);
+    const { statusCode, contentType } = await fetchAssetHeaders(ogImageUrl);
+    expect(statusCode).toBeLessThan(400);
+    expect(contentType && contentType.startsWith('image/')).toBe(true);
   }, 30_000);
 
   it('serves room/game-specific OG metadata for share URL', async () => {
@@ -59,5 +87,14 @@ describe('Prod Share Page E2E', () => {
         SHARE_ROOM,
       )}&amp;game=${encodeURIComponent(SHARE_GAME)}`,
     );
+    const ogImageMatch = html.match(
+      /<meta\s+property="og:image"\s+content="([^"]+)"/,
+    );
+    expect(ogImageMatch).not.toBeNull();
+    const ogImageUrl = ogImageMatch?.[1] ?? '';
+    expect(ogImageUrl.startsWith(SHARE_ORIGIN)).toBe(true);
+    const { statusCode, contentType } = await fetchAssetHeaders(ogImageUrl);
+    expect(statusCode).toBeLessThan(400);
+    expect(contentType && contentType.startsWith('image/')).toBe(true);
   }, 30_000);
 });

@@ -34,6 +34,8 @@ function waitForMessage(
 
 describe('Prod WebSocket connection E2E', () => {
   it('can reconnect and rejoin the same room', async () => {
+    const roomName = `e2e-room-${Date.now()}`;
+
     // First connection
     const ws1 = new WebSocket(WS_URL);
 
@@ -46,13 +48,7 @@ describe('Prod WebSocket connection E2E', () => {
     const connected1 = await waitForMessage(ws1, (m) => m.type === 'connected');
     expect(connected1.type).toBe('connected');
 
-    const roomsList1 = await waitForMessage(ws1, (m) => m.type === 'roomsList');
-    expect(roomsList1.type).toBe('roomsList');
-
-    const roomName = (roomsList1.data as Array<{ name: string }>)[1]?.name;
-    expect(roomName).toBeDefined();
-
-    // Join a room
+    // Join a fresh, uniquely named room (created on demand)
     ws1.send(
       JSON.stringify({
         type: 'joinRoom',

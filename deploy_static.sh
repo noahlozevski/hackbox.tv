@@ -20,7 +20,7 @@ if [ -d "$APP_DIR/site/dist/shared" ]; then
   sudo cp -R "$APP_DIR/site/dist/shared" "$WEB_DIR/"
 fi
 
-# Copy any static HTML/CSS files from site root if they exist
+# Copy any static HTML/CSS/image files from site root if they exist
 if [ -f "$APP_DIR/site/index.html" ]; then
   sudo cp "$APP_DIR/site/"*.html "$WEB_DIR/" 2>/dev/null || true
 fi
@@ -29,9 +29,14 @@ if [ -f "$APP_DIR/site/style.css" ]; then
   sudo cp "$APP_DIR/site/"*.css "$WEB_DIR/" 2>/dev/null || true
 fi
 
+for ext in jpg jpeg png webp gif; do
+  if compgen -G "$APP_DIR/site/*.$ext" > /dev/null 2>&1; then
+    sudo cp "$APP_DIR/site/"*.$ext "$WEB_DIR/" 2>/dev/null || true
+  fi
+done
+
 # Set permissions
 sudo chown -R www-data:www-data "$WEB_DIR"
 sudo chmod -R 755 "$WEB_DIR"
 
 echo "Static files deployed successfully"
-

@@ -571,7 +571,14 @@ function updateQRCode(roomName: string): void {
   const sharePath = encodedGame
     ? `/share/${encodedRoom}/${encodedGame}`
     : `/share/${encodedRoom}`;
-  const shareUrl = `${window.location.origin}${sharePath}`;
+  const params = new URLSearchParams();
+  if (game.state.playerName) {
+    params.set('name', game.state.playerName);
+  }
+  const query = params.toString();
+  const shareUrl = query
+    ? `${window.location.origin}${sharePath}?${query}`
+    : `${window.location.origin}${sharePath}`;
 
   updateOpenGraphMetadata(roomName, game.currentGame ?? null, shareUrl);
 
@@ -605,13 +612,38 @@ function updateOpenGraphMetadata(
   const gameLabel =
     gameId && gameInfo[gameId] ? gameInfo[gameId].name : gameId ? gameId : null;
 
-  const ogTitle = gameLabel
-    ? `Join ${gameLabel} in ${roomName} on hackbox.tv`
-    : `Join room ${roomName} on hackbox.tv`;
+  const playerName =
+    typeof (game.state.playerName as unknown) === 'string'
+      ? game.state.playerName
+      : null;
 
-  const ogDescription = gameLabel
-    ? `Room “${roomName}” is running ${gameLabel} on hackbox.tv. Drop in and help stress‑test the hackbox.`
-    : `Jump into room “${roomName}” on hackbox.tv to chat and spin up chaotic realtime games in your browser.`;
+  const ogTitle = (() => {
+    const baseRoom = roomName || 'a room';
+    if (gameLabel) {
+      if (playerName) {
+        return `${playerName} wants you in ${baseRoom} · ${gameLabel}`;
+      }
+      return `${gameLabel} chaos in ${baseRoom}`;
+    }
+    if (playerName) {
+      return `${playerName} opened room ${baseRoom}`;
+    }
+    return `Room ${baseRoom} on hackbox.tv`;
+  })();
+
+  const ogDescription = (() => {
+    const baseRoom = roomName || 'this room';
+    if (gameLabel) {
+      if (playerName) {
+        return `${playerName} is running ${gameLabel} in “${baseRoom}”. Tap in and make it weird.`;
+      }
+      return `${gameLabel} is live in “${baseRoom}”. Join and add to the chaos.`;
+    }
+    if (playerName) {
+      return `${playerName} spun up room “${baseRoom}” on hackbox.tv. Join, chat, and start something silly.`;
+    }
+    return `Jump into room “${baseRoom}” on hackbox.tv for quick, chaotic mini games.`;
+  })();
 
   const setMeta = (selector: string, content: string): void => {
     const el = document.querySelector(selector) as
