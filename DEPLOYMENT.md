@@ -8,7 +8,19 @@ This document describes how to deploy and maintain the hackbox.tv WebSocket serv
 **Server**: Hetzner VPS
 **Repository**: https://github.com/noahlozevski/hackbox.tv.git
 
-**Mobile check**: Frogger and the UI are tuned for phones (touch controls + responsive canvas). After deploy, quickly load the site on a phone to confirm controls render and respond.
+## Game Development Philosophy
+
+All games on hackbox.tv follow these core principles:
+
+1. **Mobile-First**: Games must work perfectly on phones with touch controls
+2. **Single-File Games**: Each game should be self-contained in one TypeScript file (`site/src/game-name.ts`)
+3. **Simple & Fast**: Games should be lightweight, load quickly, and have minimal dependencies
+4. **Responsive UI**: All UI elements must scale properly on different screen sizes
+5. **Touch-Optimized**: On-screen controls for mobile, keyboard support for desktop
+6. **Self-Contained Styling**: All game-specific CSS should be injected via the game's own code
+7. **Clean Lifecycle**: Implement proper `start()` and `stop()` methods that clean up all resources
+
+**Post-Deploy Mobile Check**: After any deployment, quickly load the site on an actual phone to verify touch controls render and respond correctly.
 
 ## Architecture
 

@@ -86,16 +86,28 @@ npm run dev
 └── tsconfig.client.json   # Client TS config
 ```
 
+## Game Development Philosophy
+
+All games on hackbox.tv follow these core principles:
+
+1. **Mobile-First**: Games must work perfectly on phones with touch controls
+2. **Single-File Games**: Each game should be self-contained in one TypeScript file (`site/src/game-name.ts`)
+3. **Simple & Fast**: Games should be lightweight, load quickly, and have minimal dependencies
+4. **Responsive UI**: All UI elements must scale properly on different screen sizes
+5. **Touch-Optimized**: On-screen controls for mobile, keyboard support for desktop
+6. **Self-Contained Styling**: All game-specific CSS should be injected via the game's own code
+7. **Clean Lifecycle**: Implement proper `start()` and `stop()` methods that clean up all resources
+
 ## Adding a New Game
 
-1. Create `site/src/your-game.ts`
+1. Create `site/src/your-game.ts` (single file, self-contained)
 2. Import types: `import type { Game } from './types.js'`
-3. Implement the `Game` interface:
+3. Implement the `Game` interface following the philosophy above:
    ```typescript
    const yourGame: Game = {
      canPlay: () => window.game.players.length === 2,
-     start: () => { /* Initialize game */ },
-     stop: () => { /* Cleanup */ }
+     start: () => { /* Initialize game, inject styles, setup touch controls */ },
+     stop: () => { /* Clean up everything: DOM, listeners, intervals, styles */ }
    };
    window.games.yourGame = yourGame;
    ```
@@ -112,6 +124,7 @@ npm run dev
    git push
    # DEPLOY NOW! (see above)
    ```
+6. **Test on mobile**: Load the site on an actual phone to verify touch controls work
 
 ## Multiplayer Framework
 
