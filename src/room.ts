@@ -4,10 +4,12 @@ import * as MessageBuilder from './message-builder';
 export class Room {
   public name: string;
   public clients: Set<Client>;
+  public activeGame: string | null;
 
   constructor(name: string) {
     this.name = name;
     this.clients = new Set();
+    this.activeGame = null;
   }
 
   addClient(client: Client) {

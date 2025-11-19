@@ -16,6 +16,7 @@ import type {
   NameUpdatedMessage,
   ErrorMessage,
   GameState,
+  RoomInfo,
 } from '../shared/types';
 
 /**
@@ -55,7 +56,11 @@ function broadcastToRoomIncludingSender<T>(room: Room, message: T): void {
 // Server -> Client Message Builders
 // ============================================================================
 
-export function sendConnected(client: Client, clientId: string, name: string): void {
+export function sendConnected(
+  client: Client,
+  clientId: string,
+  name: string,
+): void {
   const message: ConnectedMessage = {
     type: 'connected',
     data: { clientId, name },
@@ -63,10 +68,7 @@ export function sendConnected(client: Client, clientId: string, name: string): v
   sendToClient(client, message);
 }
 
-export function sendRoomsList(
-  client: Client,
-  rooms: Array<{ name: string; clients: Array<{ id: string; name: string }> }>,
-): void {
+export function sendRoomsList(client: Client, rooms: RoomInfo[]): void {
   const message: RoomsListMessage = {
     type: 'roomsList',
     data: rooms,
@@ -166,7 +168,11 @@ export function broadcastGameStateUpdate(
   broadcastToRoomIncludingSender(room, message);
 }
 
-export function sendNameUpdated(client: Client, clientId: string, name: string): void {
+export function sendNameUpdated(
+  client: Client,
+  clientId: string,
+  name: string,
+): void {
   const message: NameUpdatedMessage = {
     type: 'nameUpdated',
     data: { clientId, name },

@@ -16,6 +16,15 @@ export interface PlayerInfo {
   name: string;
 }
 
+/**
+ * Room information shared between client and server
+ */
+export interface RoomInfo {
+  name: string;
+  clients: PlayerInfo[];
+  activeGame?: string | null;
+}
+
 // ============================================================================
 // WebSocket Message Types
 // ============================================================================
@@ -58,10 +67,7 @@ export interface ConnectedMessage extends BaseMessage {
 
 export interface RoomsListMessage extends BaseMessage {
   type: 'roomsList';
-  data: Array<{
-    name: string;
-    clients: PlayerInfo[];
-  }>;
+  data: RoomInfo[];
 }
 
 export interface JoinedRoomMessage extends BaseMessage {

@@ -84,6 +84,7 @@ function sendAvailableRooms(client: Client) {
   const roomsInfo = Array.from(rooms.values()).map((room) => ({
     name: room.name,
     clients: room.getClientList(),
+    activeGame: room.activeGame,
   }));
 
   MessageBuilder.sendRoomsList(client, roomsInfo);
@@ -202,12 +203,26 @@ function handleJoinRoom(client: Client, roomName: string) {
 
 // Handle messages sent by the client
 function handleClientMessage(client: Client, event: string, payload: unknown) {
-  if (client.room) {
-    // Broadcast the message to all clients in the room (including sender)
-    MessageBuilder.broadcastGameMessage(client.room, client.id, event, payload);
-  } else {
+  if (!client.room) {
     MessageBuilder.sendError(client, 'You are not in a room');
+    return;
   }
+
+  // Handle game lifecycle events
+  if (event === 'startGame') {
+    const gameId = payload as string;
+    client.room.activeGame = gameId;
+    console.log(`Game "${gameId}" started in room ${client.room.name}`);
+  } else if (event === 'stopGame') {
+    const gameId = payload as string;
+    if (client.room.activeGame === gameId) {
+      client.room.activeGame = null;
+      console.log(`Game "${gameId}" stopped in room ${client.room.name}`);
+    }
+  }
+
+  // Broadcast the message to all clients in the room (including sender)
+  MessageBuilder.broadcastGameMessage(client.room, client.id, event, payload);
 }
 
 // Handle client disconnection

@@ -218,7 +218,7 @@ function handleServerMessage(message: ServerMessage): void {
       updatePlayerNameDisplay(game);
       break;
     case 'roomsList':
-      // message.data is Array<{ name: string; clients: Array<{ id: string; name: string }> }>
+      // message.data is Array<{ name: string; clients: Array<{ id: string; name: string }>; activeGame?: string | null }>
       handleRoomsList(message.data);
       // Update the client list if we are in a room
       if (game.state.currentRoom) {
@@ -226,12 +226,32 @@ function handleServerMessage(message: ServerMessage): void {
           (room: {
             name: string;
             clients: Array<{ id: string; name: string }>;
+            activeGame?: string | null;
           }) => room.name === game.state.currentRoom,
         );
         if (room && game.handlePlayersChanged) {
           game.handlePlayersChanged(
             room.clients.sort((a, b) => a.id.localeCompare(b.id)),
           );
+        }
+        // Sync with server's active game state
+        if (room && room.activeGame !== game.currentGame) {
+          if (room.activeGame && !game.currentGame) {
+            // Server says a game is active, but we don't have one - start it
+            window.startGame(room.activeGame, false);
+          } else if (!room.activeGame && game.currentGame) {
+            // Server says no game is active, but we have one - stop it
+            const gameEntry = window.games?.[game.currentGame];
+            if (gameEntry?._originalStop) {
+              gameEntry._originalStop.call(gameEntry);
+            } else if (gameEntry) {
+              gameEntry.stop();
+            }
+            game.currentGame = null;
+            if (game.state.currentRoom) {
+              updateQRCode(game.state.currentRoom);
+            }
+          }
         }
       }
       break;
@@ -279,26 +299,8 @@ function handleServerMessage(message: ServerMessage): void {
       }
       if (event === 'chat') {
         handleChatMessage(clientId, payload as string);
-      } else if (event === 'startGame') {
-        // Start the game for all players in the room
-        window.startGame(payload as string, false);
-      } else if (event === 'stopGame') {
-        // Stop the game for all players in the room
-        const gameId = payload as string;
-        const gameEntry = window.games?.[gameId];
-        if (gameEntry && game.currentGame === gameId) {
-          // Call the original stop method directly to avoid re-broadcasting
-          if (gameEntry._originalStop) {
-            gameEntry._originalStop.call(gameEntry);
-          } else {
-            gameEntry.stop();
-          }
-          game.currentGame = null;
-          if (game.state.currentRoom) {
-            updateQRCode(game.state.currentRoom);
-          }
-        }
       }
+      // Note: startGame/stopGame sync is handled by roomsList updates
       break;
     }
     case 'gameStateUpdate':
