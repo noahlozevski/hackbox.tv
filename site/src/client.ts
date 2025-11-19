@@ -18,7 +18,7 @@ declare global {
   interface Window {
     game: GameFramework;
     games: GameRegistry;
-    startGame: (gameId: string) => void;
+    startGame: (gameId: string, broadcastToOthers?: boolean) => Promise<void>;
     // Optional global QRCode constructor injected by the page
     QRCode?: new (
       element: HTMLElement,
@@ -92,7 +92,10 @@ const gameModuleLoaders: Record<string, () => Promise<unknown>> = {
   e2eTest: () => import('./e2e-test-game.js'),
 };
 
-window.startGame = async (gameId: string): Promise<void> => {
+window.startGame = async (
+  gameId: string,
+  broadcastToOthers = true,
+): Promise<void> => {
   let gameEntry: Game | undefined = window.games?.[gameId];
 
   if (!gameEntry) {
@@ -121,6 +124,11 @@ window.startGame = async (gameId: string): Promise<void> => {
   // Update QR code to include the game parameter
   if (game.state.currentRoom) {
     updateQRCode(game.state.currentRoom);
+  }
+
+  // Broadcast to other players so they also start the game
+  if (broadcastToOthers) {
+    game.sendMessage('startGame', gameId);
   }
 };
 
@@ -254,6 +262,9 @@ function handleServerMessage(message: ServerMessage): void {
       }
       if (event === 'chat') {
         handleChatMessage(clientId, payload as string);
+      } else if (event === 'startGame') {
+        // Start the game for all players in the room
+        window.startGame(payload as string, false);
       }
       break;
     }

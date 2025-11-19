@@ -143,15 +143,11 @@ function handleMessage(client: Client, message: string) {
         const data = parsed.data as
           | { message?: { event: string; payload: unknown } }
           | undefined;
-        if (
-          !data ||
-          !data.message ||
-          typeof data.message.payload !== 'string'
-        ) {
+        if (!data || !data.message || typeof data.message.event !== 'string') {
           MessageBuilder.sendError(client, 'Invalid message payload');
           return;
         }
-        handleClientMessage(client, data.message.payload as string);
+        handleClientMessage(client, data.message.event, data.message.payload);
         break;
       }
       case 'gameAction': {
@@ -205,15 +201,10 @@ function handleJoinRoom(client: Client, roomName: string) {
 }
 
 // Handle messages sent by the client
-function handleClientMessage(client: Client, messageContent: string) {
+function handleClientMessage(client: Client, event: string, payload: unknown) {
   if (client.room) {
-    // Broadcast the message to other clients in the room
-    MessageBuilder.broadcastChatMessage(
-      client.room,
-      client.id,
-      messageContent,
-      client,
-    );
+    // Broadcast the message to all clients in the room (including sender)
+    MessageBuilder.broadcastGameMessage(client.room, client.id, event, payload);
   } else {
     MessageBuilder.sendError(client, 'You are not in a room');
   }
