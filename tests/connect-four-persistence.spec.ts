@@ -99,15 +99,33 @@ test('Connect Four game state persists across refresh', async ({
   const colOne = page.locator('#game-container [data-col="1"]').first();
   await expect(colZero).toBeVisible({ timeout: 15_000 });
   await expect(colOne).toBeVisible({ timeout: 15_000 });
-  await colZero.click();
-  await page.waitForTimeout(200);
-  await expect(page2.locator('#connect-four-status')).toContainText(
-    'Your turn',
-    { timeout: 15_000 },
-  );
+  const isLocalFirst = await page.evaluate(() => {
+    const players = window.game.players.slice(0, 2);
+    if (!players.length) return false;
+    return players[0]?.id === window.game.state.playerId;
+  });
+  const localStatus = page.locator('#connect-four-status');
   const page2ColOne = page2.locator('#game-container [data-col="1"]').first();
   await expect(page2ColOne).toBeVisible({ timeout: 15_000 });
-  await page2ColOne.click();
+
+  if (isLocalFirst) {
+    await colZero.click();
+    await page.waitForTimeout(200);
+    await expect(page2.locator('#connect-four-status')).toContainText(
+      'Your turn',
+      { timeout: 15_000 },
+    );
+    await page2ColOne.click();
+  } else {
+    await expect(page2.locator('#connect-four-status')).toContainText(
+      'Your turn',
+      { timeout: 15_000 },
+    );
+    await page2ColOne.click();
+    await page.waitForTimeout(200);
+    await expect(localStatus).toContainText('Your turn', { timeout: 15_000 });
+    await colZero.click();
+  }
 
   // Give some time for messages and state sync
   await page.waitForTimeout(1000);
