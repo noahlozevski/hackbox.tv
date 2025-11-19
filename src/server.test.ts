@@ -17,7 +17,7 @@ describe('Server Message Protocol', () => {
   it('should create a roomsList message as direct array', () => {
     const roomsData = [
       { name: 'Room1', clients: ['client-1', 'client-2'] },
-      { name: 'Room2', clients: [] },
+      { name: 'pixel-party', clients: [] },
     ];
 
     const message = {

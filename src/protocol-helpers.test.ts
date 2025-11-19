@@ -25,11 +25,11 @@ describe('normalizeJoinedRoomData', () => {
   });
 
   it('handles legacy { roomName } shape and defaults clients to []', () => {
-    const data = { roomName: 'Room2' };
+    const data = { roomName: 'legacy-room' };
     const result = normalizeJoinedRoomData(data);
 
     expect(result).not.toBeNull();
-    expect(result?.room).toBe('Room2');
+    expect(result?.room).toBe('legacy-room');
     expect(result?.clients).toEqual([]);
   });
 
