@@ -1,4 +1,3 @@
-/* eslint-disable @next/next/no-sync-scripts */
 "use client";
 
 import Script from "next/script";
@@ -20,7 +19,9 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
       />
       <Script
         type="module"
-        src="/site/src/client.js"
+        // The compiled client entrypoint is deployed to /src/client.js
+        // via deploy_static.sh copying site/dist/site/src/* to the web root.
+        src="/src/client.js"
         strategy="afterInteractive"
       />
 
@@ -468,4 +469,3 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
     </>
   );
 }
-

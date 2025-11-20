@@ -9,6 +9,7 @@ export default [
       'node_modules/**',
       'site/dist/**',
       'site/*.js', // Legacy JS files
+      'web/.next/**',
       '.eslintrc.js', // Old eslint config
       '.husky/**',
     ],

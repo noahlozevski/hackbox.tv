@@ -15,9 +15,19 @@ echo "Cleaning up old processes..."
 pkill -f "node.*dist/server.js" || true
 sleep 2
 
-# Install/update dependencies
-echo "Installing dependencies..."
+# Install/update dependencies for the main app
+echo "Installing root dependencies..."
 npm install
+
+# Install/update dependencies and build the Next.js web app
+if [ -d "web" ]; then
+  echo "Installing web/ dependencies..."
+  cd web
+  npm install
+  echo "Building Next.js app..."
+  npm run build
+  cd "$APP_DIR"
+fi
 
 # Clean previous builds to ensure fresh compile
 echo "Cleaning previous builds..."
@@ -50,8 +60,17 @@ echo "Deploying static files..."
 echo "Stopping application..."
 pm2 stop hackbox-app || true
 
-echo "Starting application..."
+echo "Starting WebSocket application (hackbox-app)..."
 pm2 start dist/src/server.js --name hackbox-app || pm2 restart hackbox-app
+
+# Start or restart the Next.js frontend (hackbox-web) on port 3002
+if pm2 describe hackbox-web > /dev/null 2>&1; then
+  echo "Restarting Next.js application (hackbox-web)..."
+  pm2 restart hackbox-web
+else
+  echo "Starting Next.js application (hackbox-web)..."
+  PORT=3002 pm2 start npm --name hackbox-web --cwd "$APP_DIR/web" -- start
+fi
 
 # Save PM2 configuration
 pm2 save
