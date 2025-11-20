@@ -53,6 +53,12 @@ function render(): void {
       if (el) {
         el.textContent = `Counter: ${next}`;
       }
+      if (window.game && typeof window.game.sendMessage === 'function') {
+        window.game.sendMessage('saveGameState', {
+          gameId: 'e2eTest',
+          state: { counter: next },
+        });
+      }
     });
     container.appendChild(button);
 

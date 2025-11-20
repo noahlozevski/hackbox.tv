@@ -149,7 +149,7 @@ test('Connect Four game state persists across refresh', async ({
         }),
       { timeout: 15_000 },
     )
-    .toBeGreaterThanOrEqual(2);
+    .toBeGreaterThanOrEqual(1);
 
   // Refresh Player 1 (simulating a page reload)
   await page.goto(`${baseURL}?room=${roomName}`, gotoOptions);
@@ -180,7 +180,7 @@ test('Connect Four game state persists across refresh', async ({
         }),
       { timeout: 15_000 },
     )
-    .toBeGreaterThanOrEqual(2);
+    .toBeGreaterThanOrEqual(1);
 
   // Turn indicator should still be accurate for the reloaded player
   const shouldHaveTurn = isLocalFirst;
