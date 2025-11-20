@@ -57,20 +57,19 @@ ssh <server> "cd <app-directory> && git pull && ./deploy.sh"
 
 ## Architecture Overview
 
-- **Backend**: Node.js/TypeScript WebSocket server
-- **Frontend**: Static HTML/CSS/JS
-- **Share Pages**: Lightweight Node HTTP server that renders room/game-specific Open Graph and Twitter metadata at `/share/:room/:game?`
-- **Build System**: TypeScript compiler (`npm run build`)
-- **Process Manager**: PM2 (or similar)
-- **Deployment Script**: `./deploy.sh` on the server handles build and restart
+- **Backend**: Node.js/TypeScript WebSocket server (`src/server.ts`)
+- **Frontend**: Next.js app in `web/` plus a compiled static bundle under `/var/www/hackbox_site` for the client/game scripts
+- **Share Pages**: Implemented as Next.js route handlers at `/share/:room` and `/share/:room/:game`, using `buildSharePageHtml` for OG/Twitter metadata
+- **Build System**: TypeScript compiler for the backend/client (`npm run build`) and Next.js for the web app (`cd web && npm run build`)
+- **Process Manager**: PM2
+- **Deployment Script**: `./deploy.sh` on the server handles builds and restarts both the WebSocket server and the Next.js app
 
 The `deploy.sh` script on the server typically:
-1. Installs/updates dependencies
-2. Builds TypeScript → JavaScript
-3. Deploys static files
-4. Restarts the application
-
-The share-page HTTP server is started from the same Node process as the WebSocket server (see `src/server.ts`) and listens on port `3001`. Nginx proxies `/share/` requests to this port.
+1. Installs/updates root dependencies
+2. Installs/updates `web/` dependencies and builds the Next.js app
+3. Builds TypeScript → JavaScript for the backend and client
+4. Deploys static files
+5. Restarts the WebSocket server (`hackbox-app`) and Next.js app (`hackbox-web`) under PM2
 
 ## Testing After Deployment
 
@@ -112,18 +111,35 @@ pm2 restart <app-name>
 sudo systemctl status nginx
 ```
 
-### Nginx Share Route (Reference)
+### Nginx (Reference)
 
-The production Nginx config for `hackbox.tv.lozev.ski` includes:
+The production Nginx config for `hackbox.tv.lozev.ski`:
 
 ```nginx
-location /share/ {
-    proxy_pass http://localhost:3001;
+location /ws/ {
+    proxy_pass http://localhost:3000/;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
     proxy_set_header Host $host;
+    proxy_cache_bypass $http_upgrade;
+}
+
+location / {
+    try_files $uri @next;
+}
+
+location @next {
+    proxy_pass http://localhost:3002;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
 }
 ```
 
-This forwards `/share/:room/:game?` URLs to the Node share-page server so social crawlers (Twitter/X, iMessage, etc.) see room/game-specific OG/Twitter tags.
+Static assets are still served directly from `/var/www/hackbox_site`, and all other HTTP traffic (including `/share/`) is handled by the Next.js app.
 
 ### Environment Variables
 

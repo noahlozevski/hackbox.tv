@@ -1,4 +1,3 @@
-import * as http from 'http';
 import WebSocket, { Server as WebSocketServer } from 'ws';
 import { Room } from './room';
 import { Client } from './client';
@@ -12,72 +11,12 @@ import type {
   UpdateNameRequest,
 } from '../shared/types';
 import * as MessageBuilder from './message-builder';
-import { buildSharePageHtml } from './share-page';
 
 // Server setup
 const PORT = 3000;
 const HOST = '0.0.0.0';
 const wss = new WebSocketServer({ port: PORT, host: HOST });
 console.log(`WebSocket server is running on ws://${HOST}:${PORT}`);
-
-// Lightweight HTTP share page server for social previews
-const SHARE_PORT = 3001;
-const PUBLIC_ORIGIN =
-  process.env.HACKBOX_PUBLIC_ORIGIN ?? 'https://hackbox.tv.lozev.ski';
-
-const shareServer = http.createServer((req, res) => {
-  if (!req.url) {
-    res.statusCode = 400;
-    res.end('Bad Request');
-    return;
-  }
-
-  const url = new URL(req.url, PUBLIC_ORIGIN);
-  const segments = url.pathname.split('/').filter(Boolean);
-
-  if (segments[0] !== 'share') {
-    res.statusCode = 404;
-    res.end('Not Found');
-    return;
-  }
-
-  if (req.method !== 'GET') {
-    res.statusCode = 405;
-    res.setHeader('Allow', 'GET');
-    res.end('Method Not Allowed');
-    return;
-  }
-
-  const roomSegment = segments[1] ?? '';
-  const gameSegment = segments[2] ?? null;
-
-  if (!roomSegment) {
-    res.statusCode = 400;
-    res.end('Missing room');
-    return;
-  }
-
-  const roomName = decodeURIComponent(roomSegment);
-  const gameId = gameSegment ? decodeURIComponent(gameSegment) : null;
-
-  const html = buildSharePageHtml({
-    origin: PUBLIC_ORIGIN,
-    roomName,
-    gameId,
-    // Optional: include inviter name when present in the URL
-    playerName: url.searchParams.get('name') ?? undefined,
-  });
-
-  res.statusCode = 200;
-  res.setHeader('Content-Type', 'text/html; charset=utf-8');
-  res.end(html);
-});
-
-shareServer.listen(SHARE_PORT, HOST, () => {
-  console.log(
-    `Share page server is running on http://${HOST}:${SHARE_PORT}/share/{room}/{game?}`,
-  );
-});
 
 const rooms: Map<string, Room> = new Map();
 const clients: Map<WS, Client> = new Map();
