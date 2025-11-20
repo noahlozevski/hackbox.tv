@@ -1,18 +1,16 @@
 import { NextRequest } from 'next/server';
-import { buildSharePageHtml } from '../../../../../../src/share-page';
+import { buildSharePageHtml } from '../../../../../src/share-page';
 
 const PUBLIC_ORIGIN =
   process.env.HACKBOX_PUBLIC_ORIGIN ?? 'https://hackbox.tv.lozev.ski';
 
 export async function GET(
   request: NextRequest,
-  context: { params: Promise<{ room: string; game?: string }> },
+  context: { params: { room: string } },
 ) {
-  const { room, game } = await context.params;
-  const roomParam = room;
-  const gameId = game ?? null;
+  const { room } = context.params;
 
-  if (!roomParam) {
+  if (!room) {
     return new Response('Missing room', { status: 400 });
   }
 
@@ -21,8 +19,8 @@ export async function GET(
 
   const html = buildSharePageHtml({
     origin: PUBLIC_ORIGIN,
-    roomName: decodeURIComponent(roomParam),
-    gameId: gameId ? decodeURIComponent(gameId) : null,
+    roomName: decodeURIComponent(room),
+    gameId: null,
     playerName,
   });
 
